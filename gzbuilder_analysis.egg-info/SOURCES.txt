@@ -1,0 +1,9 @@
+setup.py
+gzbuilder_analysis/__init__.py
+gzbuilder_analysis/config.py
+gzbuilder_analysis.egg-info/PKG-INFO
+gzbuilder_analysis.egg-info/SOURCES.txt
+gzbuilder_analysis.egg-info/dependency_links.txt
+gzbuilder_analysis.egg-info/not-zip-safe
+gzbuilder_analysis.egg-info/requires.txt
+gzbuilder_analysis.egg-info/top_level.txt
