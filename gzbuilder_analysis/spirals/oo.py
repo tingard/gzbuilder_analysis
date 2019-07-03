@@ -80,6 +80,28 @@ class Arm():
             self.sigma[0, 0]
         )
 
+    def get_error(self):
+        foo = []
+        for i in np.unique(self.groups):
+            t = self.t[self.groups == i]
+            R = self.R[self.groups == i]
+            if len(t) < 10:
+                continue
+            pw = self.point_weights[self.groups == i]
+            self.logsp_model.fit(np.expand_dims(t, 1), R,
+                                 bayesianridge__sample_weight=pw)
+            br = self.logsp_model.named_steps['bayesianridge'].regressor_
+            coef = br.coef_
+            sigma = br.sigma_
+            pa, sigma_pa, chirality = get_pitch_angle(
+              coef[0],
+              sigma[0, 0]
+            )
+            foo.append((pa, sigma_pa))
+        foo = np.array(foo)
+
+        return np.sqrt(np.sum(foo[:, 1]**2))
+
     def get_parent(self):
         return self.__parent_pipeline
 

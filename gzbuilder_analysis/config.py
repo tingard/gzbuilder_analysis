@@ -13,6 +13,12 @@ DEFAULT_SPIRAL = {
     'i0': 0.1, 'spread': 0.5, 'falloff': 1.0,
 }
 
+SPIRAL_LOF_KWARGS = {
+    'n_neighbors': 20,
+    'contamination': 'auto',
+    'novelty': True
+}
+
 # Hyper-priors on bayesian ridge regression for log spiral fitting
 SPIRAL_BAYESIAN_RIDGE_PRIORS = {
     'alpha_1': 1.0230488753392505e-08,
