@@ -56,4 +56,5 @@ PARAM_BOUNDS = {
     'c': (1E-2, 1E1),
     'spread': (0, 1E2),
     'falloff': (1E-2, 1E10),
+    'roll': (-np.inf, np.inf)
 }

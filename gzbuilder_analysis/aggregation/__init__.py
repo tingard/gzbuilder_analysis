@@ -153,6 +153,37 @@ def get_spiral_arms(classifications, gal, angle, parallel=True):
     return p.get_arms()
 
 
+def make_errors(models, masks):
+    comps = ('disk', 'bulge', 'bar')
+    params = ('axRatio', 'rEff', 'i0', 'n', 'c')
+    disks, bulges, bars = [
+        pd.DataFrame(j)
+        for j in (
+            models[masks[i]].apply(
+                lambda a: a.get(comps[i])
+            ).dropna().values.tolist()
+            for i in range(3)
+        )
+    ]
+    out = {}
+    try:
+        out['disk'] = disks.describe().drop('roll', axis=1)\
+            .loc['std'].to_dict()
+    except ValueError:
+        out['disk'] = {k: np.nan for k in params}
+    try:
+        out['bulge'] = bulges.describe().drop('roll', axis=1)\
+            .loc['std'].to_dict()
+    except ValueError:
+        out['bulge'] = {k: np.nan for k in params}
+    try:
+        out['bar'] = bars.describe().drop('roll', axis=1)\
+            .loc['std'].to_dict()
+    except ValueError:
+        out['bar'] = {k: np.nan for k in params}
+    return out
+
+
 def make_model(classifications, gal, angle, outfile=None, parallel=True):
     annotations = classifications['annotations'].apply(json.loads)
     models = annotations\
@@ -184,9 +215,10 @@ def make_model(classifications, gal, angle, outfile=None, parallel=True):
                 },
                 f,
             )
+    errors = make_errors(models, cluster_masks)
     return {
         'disk': aggregate_disk,
         'bulge': aggregate_bulge,
         'bar': aggregate_bar,
         'spirals': logsps,
-    }, cluster_masks, arms
+    }, errors, cluster_masks, arms

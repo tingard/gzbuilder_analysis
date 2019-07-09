@@ -39,7 +39,11 @@ def parse_sersic_comp(comp, size_diff=1):
             minor_axis * float(comp['value'][1]['value']) * size_diff
         ),
         'axRatio': minor_axis / major_axis,
-        'i0': float(comp['value'][2]['value']),
+        'i0': (
+            float(comp['value'][2]['value'])
+            if comp['value'][2]['value'] is not None
+            else 0.2
+        ),
         'c': 2,
         'n': 1,
     }
@@ -101,7 +105,7 @@ def parse_annotation(annotation, size_diff=1):
     return out
 
 
-def parse_aggregate_model(a_m, size_diff=1.0):
+def scale_aggregate_model(a_m, size_diff=1.0):
     model = {}
     for c in ('disk', 'bulge', 'bar'):
         model[c] = a_m.get(c, None)
@@ -113,6 +117,15 @@ def parse_aggregate_model(a_m, size_diff=1.0):
       for points in a_m.get('spirals', [])
     ]
     return model
+
+
+def scale_model_errors(e, size_diff=1.0):
+    error = {}
+    for c in ('disk', 'bulge', 'bar'):
+        error[c] = deepcopy(e.get(c, None))
+        if e.get(c, None) is not None:
+            error[c]['rEff'] *= size_diff
+    return error
 
 
 # SECTION: Model saving
@@ -153,9 +166,9 @@ def sanitize_model(m):
     return {
         'spiral': [sanitize_spiral_param_dict(s) for s in m['spiral']],
         **{
-            k: sanitize_param_dict(v)
+            k: sanitize_param_dict(v, k)
             for k, v in m.items()
-            if k is not 'spiral'
+            if k != 'spiral'
         }
     }
 
@@ -171,7 +184,7 @@ def sanitize_spiral_param_dict(p):
     return points, out
 
 
-def sanitize_param_dict(p):
+def sanitize_param_dict(p, k=None):
     """Enusre physical parameters for component
     Constraints used:
         rEff > 0
@@ -185,12 +198,12 @@ def sanitize_param_dict(p):
     # 0 < roll < np.pi (not 2*pi due to rotational symmetry)
     out = deepcopy(p)
     out['rEff'] = (
-        abs(out['rEff'])
+        abs(p['rEff'])
         * (abs(p['axRatio']) if abs(p['axRatio']) > 1 else 1)
     )
     out['axRatio'] = min(abs(p['axRatio']), 1 / abs(p['axRatio']))
     out['roll'] = p['roll'] % np.pi
-    out['i0'] = max(out.get('i0', 0), 0)
+    out['i0'] = max(p.get('i0', 0), 0)
     return out
 
 

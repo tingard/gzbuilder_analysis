@@ -9,6 +9,11 @@ from gzbuilder_analysis.rendering.spiral import spiral_arm
 import gzbuilder_analysis.parsing as pa
 from gzbuilder_analysis.config import FIT_PARAMS, PARAM_BOUNDS
 
+# Problem space:
+#
+# We want to be able to take a parameter list and use that to construct a
+# galaxy bulder model, as efficiently as possible.
+
 
 def get_params(n_arms):
     sersic_keys = ('i0', 'rEff', 'axRatio', 'n', 'c')
