@@ -13,6 +13,7 @@ DEFAULT_SPIRAL = {
     'i0': 0.1, 'spread': 0.5, 'falloff': 1.0,
 }
 
+# Parameters for Local Outlier Factor cleaning of spiral arm clusters
 SPIRAL_LOF_KWARGS = {
     'n_neighbors': 20,
     'contamination': 'auto',
@@ -49,12 +50,12 @@ FIT_PARAMS = {
 }
 
 PARAM_BOUNDS = {
-    'i0': (0, 50),
-    'rEff': (0, 1E4),
-    'axRatio': (0.2, 1),
-    'n': (0.3, 10),
+    'i0': (0, np.inf),
+    'rEff': (0, np.inf),
+    'axRatio': (1E-2, 1E2),
+    'n': (0.1, 10),
     'c': (1E-2, 1E1),
-    'spread': (0, 1E2),
-    'falloff': (1E-2, 1E10),
+    'spread': (0, np.inf),
+    'falloff': (1E-2, np.inf),
     'roll': (-np.inf, np.inf)
 }

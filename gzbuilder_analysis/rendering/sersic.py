@@ -24,9 +24,10 @@ def calc_boxy_ellipse_dist(x, y, mu, roll, rEff, axRatio, c):
         - mu[1] * np.cos(roll) - mu[0] * np.sin(roll)
     # return a scaled version of the radius (multiplier is chosen so svg tool
     # doesn't impact badly on shown model component)
-    return 3.0 * np.sqrt(
+    return 3.0 * np.power(
         np.power(axRatio / rEff, c) * np.power(np.abs(xPrime - mu[0]), c)
-        + np.power(np.abs(yPrime - mu[1]), c) / np.power(rEff, c)
+        + np.power(np.abs(yPrime - mu[1]), c) / np.power(rEff, c),
+        1 / c
     )
 
 

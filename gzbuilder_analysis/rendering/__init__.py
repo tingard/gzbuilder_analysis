@@ -59,7 +59,7 @@ def compare_to_galaxy(arr, galaxy, psf=None, pixel_mask=None, stretch=True):
     A 0.8 multiplier was present in the original rendering code
     """
     if pixel_mask is None:
-        pixel_mask = np.ones_like(arr)
+        pixel_mask = np.ones(1)
     if psf is None:
         masked_model = arr * pixel_mask
     else:

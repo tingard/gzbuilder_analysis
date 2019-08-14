@@ -1,6 +1,7 @@
 import pandas as pd
 import numpy as np
 from copy import deepcopy
+from gzbuilder_analysis.parsing import sanitize_model
 import gzbuilder_analysis.rendering as rg
 from gzbuilder_analysis.rendering.sersic import oversampled_sersic_component
 from gzbuilder_analysis.rendering.spiral import spiral_arm
@@ -54,7 +55,7 @@ class Model():
         try:
             return np.fromiter((
                 model[k[0]][k[1]]
-                if k[0] != 'spiral' and model[k[0]]
+                if (k[0] != 'spiral' and model[k[0]])
                 else model[k[0]][k[1]][1][k[2]]
                 for k in template
             ), count=len(template), dtype=np.float64)
@@ -72,7 +73,7 @@ class Model():
                     new_model[k[0]][k[1]][1][k[2]] = p[i]
             except (KeyError, TypeError):
                 pass
-        return new_model
+        return sanitize_model(new_model)
 
     def _render_component(self, comp_name, model, oversample_n=5):
         if comp_name == 'spiral':
@@ -106,10 +107,11 @@ class Model():
             arr, self.psf, mode='same', boundary='symm'
         )
 
-    def render(self, model):
+    def render(self, model=None):
+        _model = model if model is not None else self._model
         return self._psf_convolve(
             np.add.reduce(
-                self._calculate_components(model)
+                self._calculate_components(_model)
             )
         )
 
@@ -126,3 +128,9 @@ class Model():
     def _repr_html_(self, model=None):
         c, spirals = self.to_df(model)
         return c.to_html() + spirals.to_html()
+
+    def copy_with_new_model(self, new_model=None):
+        return self.__class__(
+            new_model, self.data,
+            psf=self.psf, pixel_mask=self.pixel_mask
+        )

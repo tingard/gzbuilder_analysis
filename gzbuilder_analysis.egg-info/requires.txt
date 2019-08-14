@@ -1,6 +1,7 @@
 numpy
+scipy
 pandas
-matplotlib
 scikit-learn
 numba
 shapely
+tqdm

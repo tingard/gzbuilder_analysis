@@ -1,39 +1,77 @@
-from copy import deepcopy
-from scipy.optimize import minimize
+import numpy as np
+from tqdm import tqdm
+from scipy.optimize import minimize, dual_annealing
 from sklearn.metrics import mean_squared_error
 from gzbuilder_analysis.config import PARAM_BOUNDS
+from gzbuilder_analysis.parsing import sanitize_model
 
 
-def get_param_bounds(new_bounds={}):
-    return {**PARAM_BOUNDS, **new_bounds}
+def get_bounds(template):
+    return [PARAM_BOUNDS[k[-1]] for k in template]
 
 
-class ModelFitter():
-    def __init__(self, base_model, galaxy_data, psf=None, pixel_mask=None):
-        self.model = Model(base_model, galaxy_data, psf, pixel_mask)
+def loss(rendered_model, galaxy_data, pixel_mask=None,
+         metric=mean_squared_error):
+    if pixel_mask is None:
+        pixel_mask = np.ones_like(rendered_model)
+    return metric(
+        (rendered_model * pixel_mask).flatten(),
+        0.8 * (galaxy_data * pixel_mask).flatten()
+    )
 
-    def loss(self, rendered_model):
-        pixel_mask = self.model.pixel_mask
-        Y = rendered_model * pixel_mask
-        return mean_squared_error(
-            Y.flatten(),
-            0.8 * (self.model.data * pixel_mask).flatten()
-        )
 
-    def fit(self, oversample_n=5, bounds={}, *args, **kwargs):
-        md = deepcopy(self.model.base_model)
-        p0, p_key, bounds = self.model.construct_p(
-            md, bounds=get_param_bounds(bounds)
-        )
+def fit(model, template=None, bounds=None, progress=True, fit_kwargs={},
+        anneal=False):
+    """Accepts a Model or CachedModel and a parameter template list, and
+    performs fiting
+    """
+    if template is None:
+        template = model._template
+    else:
+        template = model.sanitize_template(template)
+    if bounds is None:
+        bounds = get_bounds(template)
+    if anneal:
+        # annealing cannot have infinite bounds
+        bounds = [(max(-1E3, min(i, 1E3)), max(-1E3, min(j, 1E3)))
+                  for i, j in bounds]
+    if len(template) == 0:
+        return model._model, dict(success=True, message='No parameters to fit')
+    p0 = model.to_p(template=template)
 
-        def _f(p):
-            rendered_model = self.model.render_from_p(p)
-            if rendered_model.max() > 1E3:
-                print(p)
-            return self.loss(rendered_model)
+    def f(p):
+        m = model.from_p(p, template=template)
+        try:
+            try:
+                r = model.cached_render(m)
+            except AttributeError:
+                r = model.render(m)
+        except ZeroDivisionError:
+            return 1E5
+        r = np.clip(r, -1E7, 1E7)
+        return loss(r, model.data, pixel_mask=model.pixel_mask)
 
-        # return _f, p0
-        res = minimize(_f, p0, bounds=bounds, *args, **kwargs)
-        return self.model.update_model(
-            md, res['x']
-        ), res
+    if progress:
+        with tqdm(desc='Fitting model', leave=False) as pbar:
+            cb = fit_kwargs.pop('callback', lambda *p: None)
+
+            def update_bar(*args):
+                if len(args) == 3:
+                    pbar.desc
+                pbar.update(1)
+                cb(*args)
+            if anneal:
+                res = dual_annealing(f, bounds=bounds, callback=update_bar,
+                                     **fit_kwargs)
+            else:
+                res = minimize(f, p0, bounds=bounds, callback=update_bar,
+                               **fit_kwargs)
+    else:
+        if anneal:
+            res = dual_annealing(f, bounds=bounds, **fit_kwargs)
+        else:
+            res = minimize(f, p0, bounds=bounds, **fit_kwargs)
+    new_model = sanitize_model(
+        model.from_p(res['x'], template=template)
+    )
+    return new_model, res

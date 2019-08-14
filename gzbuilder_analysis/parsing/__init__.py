@@ -128,20 +128,37 @@ def scale_model_errors(e, size_diff=1.0):
     return error
 
 
+def standardise_model(model):
+    """Galaxy Buildler models do not take the form
+    $\Sigma(r ) = \Sigma_e\exp\left[-\kappa\left(\left(\frac{r}{r_e}\right)^{1/n} - 1\right)\right]$
+    Instead, $\Sigma_e = \frac{i_0}{2};\; \kappa = b_n;\; D = \left(\frac{r}{r_e}\right)$
+    So we must transform parameters accordingly
+    """
+    standardised_model = deepcopy(model)
+    for k in ('disk', 'bulge', 'bar'):
+        standardised_model[k]['Ie'] = standardised_model[k]['i0'] / 2
+        standardised_model[k]['Re'] = standardised_model[k]['rEff'] / 3
+    return standardised_model
+
+
 # SECTION: Model saving
 def make_json(model):
-    a = deepcopy(model)
-    if a['disk'] is not None:
-        a['disk']['mu'] = list(model['disk']['mu'])
-    if a['bulge'] is not None:
-        a['bulge']['mu'] = list(model['bulge']['mu'])
-    if a['bar'] is not None:
-        a['bar']['mu'] = list(model['bar']['mu'])
-    a['spiral'] = [
-        [s[0].tolist(), s[1]]
-        for s in model['spiral']
-    ]
-    return a
+    try:
+        a = deepcopy(model)
+        for k in ('disk', 'bulge', 'bar'):
+            if a[k] is not None:
+                try:
+                    a[k]['mu'] = list(model[k]['mu'])
+                except KeyError:
+                    pass
+        if a.get('spiral', None) is not None:
+            a['spiral'] = [
+                [s[0].tolist(), s[1]]
+                for s in model['spiral']
+            ]
+        return a
+    except TypeError:
+        return np.nan
 
 
 def unmake_json(model):
@@ -157,6 +174,29 @@ def unmake_json(model):
         for s in model['spiral']
     ]
     return a
+
+
+# SECTION: Model scaling
+def make_unscaled_model(scaled_model, multiplier=1.0):
+    """recover from the multiplier used for rendering, available in the diff data
+    """
+    model = deepcopy(scaled_model)
+    for k in ('disk', 'bulge', 'bar'):
+        try:
+            model[k]['i0'] *= multiplier
+        except TypeError:
+            pass
+    try:
+        for i in range(len(model['spiral'])):
+            model['spiral'][i][1]['i0'] *= multiplier
+    except TypeError as e:
+        print(len(model['spiral']))
+        print(
+            [model['spiral'][i][1]['i0'] for i in range(len(model['spiral']))],
+            multiplier
+        )
+        raise(e)
+    return model
 
 
 # SECTION: Model sanitization

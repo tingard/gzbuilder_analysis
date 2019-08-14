@@ -1,50 +1,57 @@
 import numpy as np
 import string
 from tqdm import tqdm
+from scipy.optimize import minimize
+from gzbuilder_analysis.fitting import loss
+from gzbuilder_analysis.fitting._fitter import get_bounds
 from IPython.display import display, update_display, HTML
-from gzbuilder_analysis.fitting import get_param_bounds
 
 
-def interactive_fitter(model_fitter):
+class UpdatableDisplay():
+    def __init__(self, thing_to_display):
+        self.DISPLAY_ID = ''.join(
+            np.random.choice(
+                list(string.ascii_letters + string.digits),
+                30
+            )
+        )
+        display(thing_to_display, display_id=self.DISPLAY_ID)
+
+    def __call__(self, thing_to_display):
+        update_display(thing_to_display, display_id=self.DISPLAY_ID)
+
+
+def live_fit(model, template=None, bounds=None, progress=True):
+    """Accepts a Model or CachedModel and a parameter template list, and
+    performs fiting
+    """
     display(HTML(
         'Running:<br>'
         + '<code>fitted_model, res = model_fitter.fit()</code>'
     ))
-    p0, p_key, bounds = model_fitter.model.construct_p(
-        model_fitter.model.base_model, bounds=get_param_bounds({})
-    )
-    DISPLAY_ID = ''.join(
-        np.random.choice(
-            list(string.ascii_letters + string.digits),
-            30
-        )
-    )
+    if template is None:
+        template = model._template
+    if bounds is None:
+        bounds = get_bounds(template)
 
-    display(
-        HTML(model_fitter.model._repr_html_(model_fitter.model.base_model)),
-        display_id=DISPLAY_ID
-    )
+    p0 = model.to_p(template=template)
 
-    with tqdm(desc='Fitting model') as pbar:
+    d = UpdatableDisplay(HTML(model._repr_html_()))
+
+    def f(p):
+        m = model.from_p(p, template=template)
+        try:
+            r = model.cached_render(m)
+        except AttributeError:
+            r = model.render(m)
+        return loss(r, model.data, pixel_mask=model.pixel_mask)
+
+    with tqdm(desc='Fitting model', leave=False) as pbar:
         def update_bar(p):
             pbar.update(1)
-            new_model = model_fitter.model.update_model(
-                model_fitter.model.base_model,
-                p
-            )
-            s_html = model_fitter.model._repr_html_(new_model)
-            update_display(HTML(s_html), display_id=DISPLAY_ID)
-        fitted_agg_nosp_model, agg_nosp_res = model_fitter.fit(
-            callback=update_bar,
-            options=dict(maxiter=100)
-        )
+            m = model.from_p(p, template=template)
+            d(HTML(model._repr_html_(model=m)))
+        res = minimize(f, p0, bounds=bounds, callback=update_bar)
 
-    if agg_nosp_res.success:
-        display(HTML(
-            '<span style="color:green">Successfuly completed fit</span>'
-        ))
-    else:
-        display(HTML(
-            '<span style="color:red">Did not fit successfully!</span>'
-        ))
-    return fitted_agg_nosp_model, agg_nosp_res
+    new_model = model.from_p(res['x'], template=template)
+    return new_model, res
