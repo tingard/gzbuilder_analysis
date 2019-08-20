@@ -41,13 +41,23 @@ class Model():
     def sanitize_template(self, template):
         if template is None:
             return self._template
-        return [
+        tpl_sersic = [
             v for v in template
             if v[0] != 'spiral' and self[v[0]] is not None
-        ] + [
-            v for v in template
-            if v[0] == 'spiral' and v[1] < self._n_spirals
         ]
+        spiral_indices_present = any(
+            len(v) == 3 for v in template if v[0] == 'spiral'
+        )
+        if spiral_indices_present:
+            tpl_spiral = [v for v in template if v[0] == 'spiral']
+        else:
+            tpl_spiral = [
+                (v[0], i, v[1])
+                for i in range(self._n_spirals)
+                for v in template
+                if v[0] == 'spiral'
+            ]
+        return tpl_sersic + tpl_spiral
 
     def to_p(self, model=None, template=None):
         template = self.sanitize_template(template)

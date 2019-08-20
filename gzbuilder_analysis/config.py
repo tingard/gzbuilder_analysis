@@ -49,6 +49,18 @@ FIT_PARAMS = {
     'spiral': ('i0', 'spread', 'falloff'),
 }
 
+SLIDER_FITTING_TEMPLATE = (
+    ('disk', 'i0'),
+    ('bulge', 'i0'),
+    ('bulge', 'n'),
+    ('bar', 'i0'),
+    ('bar', 'n'),
+    ('bar', 'c'),
+    ('spiral', 'i0'),
+    ('spiral', 'falloff'),
+    ('spiral', 'spread'),
+)
+
 PARAM_BOUNDS = {
     'i0': (0, np.inf),
     'rEff': (0, np.inf),

@@ -7,7 +7,9 @@ from gzbuilder_analysis.parsing import sanitize_model
 
 
 def get_bounds(template):
-    return [PARAM_BOUNDS[k[-1]] for k in template]
+    bounds = [PARAM_BOUNDS[k[-1]] for k in template]
+    assert len(bounds) == len(template)
+    return bounds
 
 
 def loss(rendered_model, galaxy_data, pixel_mask=None,
@@ -38,6 +40,8 @@ def fit(model, template=None, bounds=None, progress=True, fit_kwargs={},
     if len(template) == 0:
         return model._model, dict(success=True, message='No parameters to fit')
     p0 = model.to_p(template=template)
+
+    assert len(p0) == len(bounds)
 
     def f(p):
         m = model.from_p(p, template=template)
