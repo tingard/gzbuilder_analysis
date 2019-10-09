@@ -61,13 +61,14 @@ def compare_to_galaxy(arr, galaxy, psf=None, pixel_mask=None, stretch=True):
     if pixel_mask is None:
         pixel_mask = np.ones(1)
     if psf is None:
-        masked_model = arr * pixel_mask
+        masked_model = np.nanprod((arr, pixel_mask), axis=0)
     else:
-        masked_model = (
-            convolve2d(arr, psf, mode='same', boundary='symm')
-            * pixel_mask
-        )
-    D = (0.8 * galaxy * pixel_mask) - masked_model
+        masked_model = np.nanprod((
+            convolve2d(arr, psf, mode='same', boundary='symm'),
+            pixel_mask
+        ), axis=0)
+    masked_galaxy = np.nanprod((galaxy, pixel_mask), axis=0)
+    D = (0.8 * masked_galaxy) - masked_model
     if stretch:
         return asinh_stretch(D)
     return D

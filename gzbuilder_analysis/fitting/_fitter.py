@@ -12,37 +12,52 @@ def get_bounds(template):
     return bounds
 
 
-def loss(rendered_model, galaxy_data, pixel_mask=None, multiplier=1.0,
-         metric=mean_squared_error, sigma_image=None):
+def loss(model_data, galaxy_data, pixel_mask=None, sigma_image=None,
+         multiplier=1.0, metric=None):
     if pixel_mask is None:
-        pixel_mask = np.ones_like(rendered_model)
-    if sigma_image is None:
-        point_weights = np.ones_like(rendered_model)
-        point_weights[pixel_mask.astype(bool)] = 0
-        point_weights /= np.nanmean(point_weights)
-    else:
-        point_weights = 1 / np.sqrt(sigma_image)
-        point_weights[pixel_mask.astype(bool)] = 0
-        point_weights /= np.nanmean(point_weights)
-    try:
-        return metric(
-            (
-                np.nanprod((rendered_model * multiplier, pixel_mask), axis=0)
-            ).flatten() / 0.8,
-            (
-                np.nanprod((galaxy_data * multiplier, pixel_mask), axis=0)
-            ).flatten(),
-            sample_weight=point_weights.ravel(),
+        pixel_mask = np.ones_like(rendered_model, dtype=bool)
+    if pixel_mask.dtype != bool:
+        pixel_mask = pixel_mask.astype(bool)
+
+    # default to reduced chisq calculation
+    if metric is None and sigma_image is not None:
+        return chisq(model_data, galaxy_data, pixel_mask, sigma_image)
+
+    masked_scaled_model = model_data[pixel_mask] * multiplier
+    masked_scaled_data = galaxy_data[pixel_mask] * multiplier
+    if np.any(np.isnan(masked_scaled_model)):
+        raise ValueError('NaNs present in model')
+    if np.any(np.isnan(masked_scaled_data)):
+        raise ValueError('NaNs present in data')
+
+    masked_scaled_sigma = (
+        None if sigma_image is None
+        else sigma_image[pixel_mask] * multiplier
+    )
+    point_weights = None if sigma_image is None else 1 / masked_scaled_sigma**2
+    return metric(
+        masked_scaled_model / 0.8,
+        masked_scaled_data,
+        sample_weight=point_weights,
+    )
+
+
+def chisq(model_data, galaxy_data, pixel_mask, sigma_image):
+    # chisq = 1/N_dof * sum(f_data(x, y) - f_model(x, y))^2 / sigma(x, y)^2
+    # Assume N_dof ~ number of unmasked pixels
+    if pixel_mask.dtype != bool:
+        pixel_mask = pixel_mask.astype(bool)
+    return (
+        1 / galaxy_data[pixel_mask].size
+        * np.sum(
+            ((model_data / 0.8 - galaxy_data)[pixel_mask] / sigma_image[pixel_mask])**2
         )
-    except TypeError:
-        return metric(
-            (
-                np.nanprod((rendered_model * multiplier, pixel_mask), axis=0)
-            ).flatten() / 0.8,
-            (
-                np.nanprod((galaxy_data * multiplier, pixel_mask), axis=0)
-            ).flatten(),
-        )
+    )
+
+
+def chisq_of_model(model):
+    r = model.render()
+    return chisq(r, model.data, model.pixel_mask, model.sigma_image)
 
 
 def fit(model, template=None, bounds=None, progress=True, fit_kwargs={},
@@ -75,8 +90,11 @@ def fit(model, template=None, bounds=None, progress=True, fit_kwargs={},
                 r = model.render(m)
         except ZeroDivisionError:
             return 1E5
+        if np.any(np.isnan(r)):
+            return 1E5
         r = np.clip(r, -1E7, 1E7)
-        return loss(r, model.data, pixel_mask=model.pixel_mask)
+        return loss(r, model.data, pixel_mask=model.pixel_mask,
+                    sigma_image=model.sigma_image)
 
     if progress:
         with tqdm(desc='Fitting model', leave=False) as pbar:

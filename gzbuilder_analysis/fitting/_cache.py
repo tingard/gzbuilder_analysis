@@ -10,7 +10,8 @@ class CachedModel(Model):
         self.cache = self._calculate_components(self._model)
         self.cache_index = {'disk': 0, 'bulge': 1, 'bar': 2, 'spiral': 3}
 
-    def cached_render(self, new_model, template=None):
+    def cached_render(self, new_model=None, template=None):
+        new_model = self._model if new_model is None else new_model
         template = self.sanitize_template(template)
         idx = np.arange(len(template))
         new_p = self.to_p(new_model)

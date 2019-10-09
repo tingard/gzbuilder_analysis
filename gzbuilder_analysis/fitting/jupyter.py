@@ -41,10 +41,18 @@ def live_fit(model, template=None, bounds=None, progress=True):
     def f(p):
         m = model.from_p(p, template=template)
         try:
-            r = model.cached_render(m)
-        except AttributeError:
-            r = model.render(m)
-        return loss(r, model.data, pixel_mask=model.pixel_mask)
+            try:
+                r = model.cached_render(m)
+            except AttributeError:
+                r = model.render(m)
+        except ZeroDivisionError:
+            return 1E5
+        if np.any(np.isnan(r)):
+            return 1E5
+        r = np.clip(r, -1E7, 1E7)
+        return loss(r, model.data, pixel_mask=model.pixel_mask,
+                    sigma_image=model.sigma_image)
+
 
     with tqdm(desc='Fitting model', leave=False) as pbar:
         def update_bar(p):

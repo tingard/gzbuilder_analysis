@@ -12,7 +12,7 @@ from gzbuilder_analysis.config import FIT_PARAMS
 
 
 class Model():
-    def __init__(self, model, galaxy_data, psf=None, pixel_mask=None):
+    def __init__(self, model, galaxy_data, psf=None, pixel_mask=None, sigma_image=None):
         self._model = deepcopy(model)
         self._n_spirals = len(self._model['spiral'])
         # TODO: save spiral arm distances to avoid having to recalculate
@@ -23,6 +23,7 @@ class Model():
             pixel_mask if pixel_mask is not None
             else np.ones_like(galaxy_data)
         )
+        self.sigma_image = sigma_image
         self._template = [
             (k, v) for k in FIT_PARAMS.keys() for v in FIT_PARAMS[k]
             if k != 'spiral' and self._model[k] is not None
@@ -139,8 +140,20 @@ class Model():
         c, spirals = self.to_df(model)
         return c.to_html() + spirals.to_html()
 
+    def get_n_params(self, model=None):
+        m = self._model if model is None else model
+        n = [
+            6 + i
+            for i, k in enumerate(('disk', 'bulge', 'bar'))
+            if m.get(k, False)
+        ] + [
+            len(s[0])
+        ]
+
+
     def copy_with_new_model(self, new_model=None):
         return self.__class__(
             new_model, self.data,
-            psf=self.psf, pixel_mask=self.pixel_mask
+            psf=self.psf, pixel_mask=self.pixel_mask,
+            sigma_image=self.sigma_image,
         )
