@@ -71,3 +71,32 @@ PARAM_BOUNDS = {
     'falloff': (1E-2, np.inf),
     'roll': (-np.inf, np.inf)
 }
+
+
+# dict of parameter limits and default values
+BAD_PARAM_VALUES = {
+    'disk': {
+        # inf not 1 as axRatio of 1 is okay
+        'axRatio': (0, 0.5, np.inf),
+        'scale': (0, 2, 1),
+        'i0': (0, 1, 0.2),
+    },
+    'bulge': {
+        'axRatio': (0, 0.5, np.inf),
+        'scale': (0, 2, 1),
+        'i0': (0, 2, 0.5),
+        'n': (0.5, 5, 1),
+    },
+    'bar': {
+        'roll': (-np.inf, 0.0, np.inf),
+        'scale': (0, 2, 1),
+        'i0': (0, 1, 0.2),
+        'n': (0.3, 2, 0.5),
+        'c': (1.5, 3, 2),
+    },
+    'spiral': {
+        'i0': (0, 1, 0.75),
+        'spread': (0, 2, 1),
+        'falloff': (0, 2, 1),
+    }
+}

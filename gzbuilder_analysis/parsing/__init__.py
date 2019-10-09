@@ -178,17 +178,18 @@ def unmake_json(model):
 
 # SECTION: Model scaling
 def make_unscaled_model(scaled_model, multiplier=1.0):
-    """recover from the multiplier used for rendering, available in the diff data
+    """recover from the multiplier used for rendering, available in the diff
+    data. Also removes the 1/0.8 scaling used
     """
     model = deepcopy(scaled_model)
     for k in ('disk', 'bulge', 'bar'):
         try:
-            model[k]['i0'] *= multiplier
+            model[k]['i0'] *= multiplier / 0.8
         except TypeError:
             pass
     try:
         for i in range(len(model['spiral'])):
-            model['spiral'][i][1]['i0'] *= multiplier
+            model['spiral'][i][1]['i0'] *= multiplier / 0.8
     except TypeError as e:
         print(len(model['spiral']))
         print(

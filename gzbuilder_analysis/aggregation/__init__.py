@@ -12,6 +12,9 @@ from astropy.utils.exceptions import AstropyWarning
 warnings.simplefilter('ignore', category=AstropyWarning)
 
 
+# TODO: ignore defaults / extrema? (available in config.BAD_PARAM_VALUES)
+
+
 def sanitize_model(model):
     try:
         bar_axratio = model.get('bar', {}).get('axRatio', 1)
@@ -155,7 +158,7 @@ def get_spiral_arms(classifications, gal, angle, parallel=True):
 
 def make_errors(models, masks):
     comps = ('disk', 'bulge', 'bar')
-    params = ('axRatio', 'rEff', 'i0', 'n', 'c')
+    params = ('axRatio', 'rEff', 'roll', 'i0', 'n', 'c')
     disks, bulges, bars = [
         pd.DataFrame(j)
         for j in (
