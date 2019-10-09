@@ -12,14 +12,37 @@ def get_bounds(template):
     return bounds
 
 
-def loss(rendered_model, galaxy_data, pixel_mask=None,
-         metric=mean_squared_error):
+def loss(rendered_model, galaxy_data, pixel_mask=None, multiplier=1.0,
+         metric=mean_squared_error, sigma_image=None):
     if pixel_mask is None:
         pixel_mask = np.ones_like(rendered_model)
-    return metric(
-        (rendered_model * pixel_mask).flatten(),
-        0.8 * (galaxy_data * pixel_mask).flatten()
-    )
+    if sigma_image is None:
+        point_weights = np.ones_like(rendered_model)
+        point_weights[pixel_mask.astype(bool)] = 0
+        point_weights /= np.nanmean(point_weights)
+    else:
+        point_weights = 1 / np.sqrt(sigma_image)
+        point_weights[pixel_mask.astype(bool)] = 0
+        point_weights /= np.nanmean(point_weights)
+    try:
+        return metric(
+            (
+                np.nanprod((rendered_model * multiplier, pixel_mask), axis=0)
+            ).flatten() / 0.8,
+            (
+                np.nanprod((galaxy_data * multiplier, pixel_mask), axis=0)
+            ).flatten(),
+            sample_weight=point_weights.ravel(),
+        )
+    except TypeError:
+        return metric(
+            (
+                np.nanprod((rendered_model * multiplier, pixel_mask), axis=0)
+            ).flatten() / 0.8,
+            (
+                np.nanprod((galaxy_data * multiplier, pixel_mask), axis=0)
+            ).flatten(),
+        )
 
 
 def fit(model, template=None, bounds=None, progress=True, fit_kwargs={},
