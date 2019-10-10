@@ -15,18 +15,18 @@ def asinh_stretch(px, i=0.6):
 
 # rendering functions
 @jit(nopython=True)
-def calc_boxy_ellipse_dist(x, y, mu, roll, rEff, axRatio, c):
+def calc_boxy_ellipse_dist(x, y, mux, muy, roll, rEff, axRatio, c):
     xPrime = x * np.cos(roll) \
-        - y * np.sin(roll) + mu[0] \
-        - mu[0] * np.cos(roll) + mu[1] * np.sin(roll)
+        - y * np.sin(roll) + mux \
+        - mux * np.cos(roll) + muy * np.sin(roll)
     yPrime = x * np.sin(roll) \
-        + y * np.cos(roll) + mu[1] \
-        - mu[1] * np.cos(roll) - mu[0] * np.sin(roll)
+        + y * np.cos(roll) + muy \
+        - muy * np.cos(roll) - mux * np.sin(roll)
     # return a scaled version of the radius (multiplier is chosen so svg tool
     # doesn't impact badly on shown model component)
     return 3.0 * np.power(
-        np.power(axRatio / rEff, c) * np.power(np.abs(xPrime - mu[0]), c)
-        + np.power(np.abs(yPrime - mu[1]), c) / np.power(rEff, c),
+        np.power(axRatio / rEff, c) * np.power(np.abs(xPrime - mux), c)
+        + np.power(np.abs(yPrime - muy), c) / np.power(rEff, c),
         1 / c
     )
 
@@ -40,11 +40,11 @@ def _b(n):
 
 
 @jit(nopython=True)
-def sersic2d(x=0, y=0, mu=(0, 0), roll=0, rEff=1, axRatio=1, c=2, i0=1, n=1):
+def sersic2d(x=0, y=0, mux=0, muy=0, roll=0, rEff=1, axRatio=1, c=2, i0=1, n=1):
     # https://www.cambridge.org/core/services/aop-cambridge-core/content/view/S132335800000388X
     return 0.5 * i0 * np.exp(
         _b(n) * (1 - np.power(
-            calc_boxy_ellipse_dist(x, y, mu, roll, rEff, axRatio, c),
+            calc_boxy_ellipse_dist(x, y, mux, muy, roll, rEff, axRatio, c),
             1.0 / n
         ))
     )
