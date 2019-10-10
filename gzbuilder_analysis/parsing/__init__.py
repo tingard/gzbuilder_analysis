@@ -30,7 +30,8 @@ def parse_sersic_comp(comp, size_diff=1):
     roll = drawing['angle'] \
         + (0 if major_axis_index == 0 else 90)
     out = {
-        'mu': np.array((drawing['x'], drawing['y'])) * size_diff,
+        'mux': drawing['x'] * size_diff,
+        'muy': drawing['y'] * size_diff,
         # zooniverse rotation is confusing
         'roll': np.deg2rad(roll),
         # correct for a bug in the original rendering code meaning axratio > 1
@@ -110,7 +111,8 @@ def scale_aggregate_model(a_m, size_diff=1.0):
     for c in ('disk', 'bulge', 'bar'):
         model[c] = a_m.get(c, None)
         if model[c] is not None:
-            model[c]['mu'] = np.array(model[c]['mu']) * size_diff
+            model[c]['mux'] *= size_diff
+            model[c]['muy'] *= size_diff
             model[c]['rEff'] *= size_diff
     model['spiral'] = [
       [np.array(downsample(points))*size_diff, DEFAULT_SPIRAL]
@@ -145,12 +147,6 @@ def standardise_model(model):
 def make_json(model):
     try:
         a = deepcopy(model)
-        for k in ('disk', 'bulge', 'bar'):
-            if a[k] is not None:
-                try:
-                    a[k]['mu'] = list(model[k]['mu'])
-                except KeyError:
-                    pass
         if a.get('spiral', None) is not None:
             a['spiral'] = [
                 [s[0].tolist(), s[1]]
@@ -163,12 +159,6 @@ def make_json(model):
 
 def unmake_json(model):
     a = deepcopy(model)
-    if a['disk'] is not None:
-        a['disk']['mu'] = np.array(model['disk']['mu'])
-    if a['bulge'] is not None:
-        a['bulge']['mu'] = np.array(model['bulge']['mu'])
-    if a['bar'] is not None:
-        a['bar']['mu'] = np.array(model['bar']['mu'])
     a['spiral'] = [
         [np.array(s[0]), s[1]]
         for s in model['spiral']
@@ -207,7 +197,7 @@ def sanitize_model(m):
     return {
         'spiral': [sanitize_spiral_param_dict(s) for s in m['spiral']],
         **{
-            k: sanitize_param_dict(v, k)
+            k: sanitize_param_dict(v)
             for k, v in m.items()
             if k != 'spiral'
         }
@@ -225,12 +215,12 @@ def sanitize_spiral_param_dict(p):
     return points, out
 
 
-def sanitize_param_dict(p, k=None):
+def sanitize_param_dict(p):
     """Enusre physical parameters for component
     Constraints used:
         rEff > 0
         0 < axRatio < 1
-        0 < roll < np.pi (not 2*pi due to rotational symmetry)
+        0 < roll < np.pi (not 2*pi due to rotational symmetry of boxy ellipses)
     """
     if p is None:
         return p

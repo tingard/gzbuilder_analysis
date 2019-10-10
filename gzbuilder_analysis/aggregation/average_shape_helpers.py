@@ -23,7 +23,7 @@ def remove_scaling(annotation):
 def make_ellipse(comp):
     return shapely_rotate(
         shapely_scale(
-            Point(*comp['mu']).buffer(1.0),
+            Point(comp['mux'], comp['muy']).buffer(1.0),
             xfact=comp['rEff'],
             yfact=comp['rEff'] * comp['axRatio']
         ),
@@ -36,10 +36,10 @@ def make_box(comp):
         return None
     return shapely_rotate(
         box(
-            comp['mu'][0] - comp['rEff'] / 2 / comp['axRatio'],
-            comp['mu'][1] - comp['rEff'] / 2,
-            comp['mu'][0] + comp['rEff'] / 2 / comp['axRatio'],
-            comp['mu'][1] + comp['rEff'] / 2,
+            comp['mux'] - comp['rEff'] / 2 / comp['axRatio'],
+            comp['muy'] - comp['rEff'] / 2,
+            comp['mux'] + comp['rEff'] / 2 / comp['axRatio'],
+            comp['muy'] + comp['rEff'] / 2,
         ),
         -np.rad2deg(comp['roll'])
     )
@@ -102,7 +102,7 @@ def sanitize_param_dict(p):
 def get_param_list(d):
     if d is None:
         d = {}
-    return [*d.get('mu', (0, 0)), d.get('rEff', 5), d.get('axRatio', 0.7),
+    return [d.get('mux',  0), d.get('muy',  0), d.get('rEff', 5), d.get('axRatio', 0.7),
             d.get('roll', 0)]
 
 
@@ -110,8 +110,8 @@ def get_param_dict(p):
     return sanitize_param_dict({
         k: v
         for k, v in zip(
-            ('mu', 'rEff', 'axRatio', 'roll'),
-            [p[:2].tolist()] + p[2:].tolist()
+            ('mux', 'muy', 'rEff', 'axRatio', 'roll'),
+            p.tolist()
         )
     })
 
@@ -142,6 +142,4 @@ def transform_shape(shape, npix, petro_theta):
 def sanitize_comp_for_json(comp):
     if not comp:
         return None
-    elif type(comp['mu']) != list:
-        return {**comp, 'mu': comp['mu'].tolist()} if comp else None
     return comp

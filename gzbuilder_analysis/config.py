@@ -2,7 +2,8 @@ import numpy as np
 
 # Default parameters for model components
 DEFAULT_DISK = {
-    'mu': np.zeros(2) + 50,
+    'mux': 50.0,
+    'muy': 50.0,
     'roll': 0.0,
     'rEff': 100.0,
     'axRatio': 1.0,
@@ -43,9 +44,9 @@ COMPONENT_CLUSTERING_PARAMS = {
 
 # Defaults for fitting
 FIT_PARAMS = {
-    'disk':   ('i0', 'rEff', 'axRatio'),
-    'bulge':  ('i0', 'rEff', 'axRatio', 'n'),
-    'bar':    ('i0', 'rEff', 'axRatio', 'n', 'c'),
+    'disk':   ('mux', 'muy', 'i0', 'rEff', 'axRatio'),
+    'bulge':  ('mux', 'muy', 'i0', 'rEff', 'axRatio', 'n'),
+    'bar':    ('mux', 'muy', 'i0', 'rEff', 'axRatio', 'n', 'c'),
     'spiral': ('i0', 'spread', 'falloff'),
 }
 
@@ -63,6 +64,8 @@ SLIDER_FITTING_TEMPLATE = (
 
 PARAM_BOUNDS = {
     'i0': (0, np.inf),
+    'mux': (-np.inf, np.inf),
+    'muy': (-np.inf, np.inf),
     'rEff': (0, np.inf),
     'axRatio': (1E-2, 1E2),
     'n': (0.1, 10),

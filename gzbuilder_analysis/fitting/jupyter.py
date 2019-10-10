@@ -53,7 +53,7 @@ def live_fit(model, template=None, bounds=None, progress=True):
         return loss(r, model.data, pixel_mask=model.pixel_mask,
                     sigma_image=model.sigma_image)
 
-
+    print(p0, bounds)
     with tqdm(desc='Fitting model', leave=False) as pbar:
         def update_bar(p):
             pbar.update(1)
