@@ -158,6 +158,11 @@ def make_json(model):
 
 
 def unmake_json(model):
+    for k in ('disk', 'bulge', 'bar'):
+        if model[k] is not None and 'mu' in model[k]:
+            mu = model[k].pop('mu')
+            model[k]['mux'] = mu[0]
+            model[k]['muy'] = mu[1]
     a = deepcopy(model)
     a['spiral'] = [
         [np.array(s[0]), s[1]]

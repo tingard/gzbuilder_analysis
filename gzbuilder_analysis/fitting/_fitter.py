@@ -34,6 +34,8 @@ def loss(model_data, galaxy_data, pixel_mask=None, sigma_image=None,
         None if sigma_image is None
         else sigma_image[pixel_mask] * multiplier
     )
+    if metric is None:
+        metric = mean_squared_error
     point_weights = None if sigma_image is None else 1 / masked_scaled_sigma**2
     return metric(
         masked_scaled_model / 0.8,
