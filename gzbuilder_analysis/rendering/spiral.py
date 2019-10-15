@@ -29,11 +29,11 @@ def spiral_distance_numba(poly_line, distances=np.zeros((100, 100))):
 
 
 def spiral_arm(arm_points, params=DEFAULT_SPIRAL, disk=DEFAULT_DISK,
-               image_size=512, arm_distances=None):
+               image_size=(256, 256), arm_distances=None):
     if disk is None or len(arm_points) < 2:
-        return np.zeros((image_size, image_size))
+        return np.zeros(image_size)
 
-    cx, cy = np.meshgrid(np.arange(image_size), np.arange(image_size))
+    cx, cy = np.meshgrid(np.arange(image_size[1]), np.arange(image_size[0]))
 
     disk_arr = sersic_component(
         {**disk, 'i0': 1, 'rEff': disk['rEff'] / params['falloff']},

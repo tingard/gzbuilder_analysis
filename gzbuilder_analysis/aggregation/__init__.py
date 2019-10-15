@@ -5,14 +5,12 @@ from scipy.optimize import minimize
 from gzbuilder_analysis.spirals import get_drawn_arms
 from gzbuilder_analysis.spirals.oo import Pipeline
 import gzbuilder_analysis.parsing as pa
+from gzbuilder_analysis.spirals.deprojecting import change_wcs
 from gzbuilder_analysis.aggregation import average_shape_helpers as ash
 from gzbuilder_analysis.config import COMPONENT_CLUSTERING_PARAMS
 import warnings
 from astropy.utils.exceptions import AstropyWarning
 warnings.simplefilter('ignore', category=AstropyWarning)
-
-
-# TODO: ignore defaults / extrema? (available in config.BAD_PARAM_VALUES)
 
 
 def sanitize_model(model):
@@ -147,10 +145,16 @@ def get_aggregate_components(geoms, models, labels):
     return aggregate_disk, aggregate_bulge, aggregate_bar
 
 
-def get_spiral_arms(classifications, gal, angle, parallel=True):
+def get_spiral_arms(classifications, gal, angle, parallel=True,
+                    wcs_in=None, wcs_out=None):
     drawn_arms = get_drawn_arms(classifications)
     if len(drawn_arms) == 0:
         return []
+    if wcs_in is not None and wcs_out is not None:
+        drawn_arms = np.array([
+            change_wcs(arm, wcs_in, wcs_out)
+            for arm in drawn_arms
+        ])
     p = Pipeline(drawn_arms, phi=angle, ba=gal['PETRO_BA90'],
                  image_size=512, parallel=parallel)
     return p.get_arms()
@@ -187,11 +191,11 @@ def make_errors(models, masks):
     return out
 
 
-def make_model(classifications, gal, angle, outfile=None, parallel=True):
+def make_model(classifications, gal, angle, outfile=None, parallel=True, **kwargs):
     annotations = classifications['annotations'].apply(json.loads)
     models = annotations\
         .apply(ash.remove_scaling)\
-        .apply(pa.parse_annotation)\
+        .apply(pa.parse_annotation, args=((512, 512),))\
         .apply(sanitize_model)
     spirals = models.apply(lambda d: d.get('spiral', None))
     geoms = pd.DataFrame(
@@ -205,7 +209,12 @@ def make_model(classifications, gal, angle, outfile=None, parallel=True):
     aggregate_disk, aggregate_bulge, aggregate_bar = get_aggregate_components(
         geoms, models, labels
     )
-    arms = get_spiral_arms(classifications, gal, angle, parallel=parallel)
+    arms = get_spiral_arms(
+        classifications, gal, angle,
+        parallel=parallel,
+        wcs_in=kwargs.get('wcs_in', None),
+        wcs_out=kwargs.get('wcs_out', None),
+    )
     logsps = [arm.reprojected_log_spiral for arm in arms]
     if outfile is not None:
         with open(outfile, 'w') as f:
@@ -219,9 +228,18 @@ def make_model(classifications, gal, angle, outfile=None, parallel=True):
                 f,
             )
     errors = make_errors(models, cluster_masks)
-    return {
+    agg_model = {
         'disk': aggregate_disk,
         'bulge': aggregate_bulge,
         'bar': aggregate_bar,
         'spirals': logsps,
-    }, errors, cluster_masks, arms
+    }
+    if kwargs.get('image_size', False) and kwargs.get('size_diff', False):
+        agg_model = pa.scale_aggregate_model(
+            agg_model,
+            image_size=kwargs['image_size'],
+            size_diff=kwargs['size_diff'],
+            wcs_in=kwargs.get('wcs_in'),
+            wcs_out=kwargs.get('wcs_out'),
+        )
+    return agg_model, errors, cluster_masks, arms

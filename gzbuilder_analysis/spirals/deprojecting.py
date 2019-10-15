@@ -39,3 +39,9 @@ def reproject_arm(arm, angle=0, ba=1):
         deproject_arm(arm, 0, 1/ba),
         -angle, 1
     )
+
+def change_wcs(points, wcs_in, wcs_out):
+    return wcs_out.all_world2pix(
+        wcs_in.all_pix2world(points, 0),
+        0
+    )

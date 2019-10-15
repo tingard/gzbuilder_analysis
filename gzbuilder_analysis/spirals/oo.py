@@ -17,7 +17,6 @@ from gzbuilder_analysis.spirals import get_pitch_angle, get_sample_weight
 class Arm():
     def __init__(self, parent_pipeline, arms, clean_points=True):
         self.__parent_pipeline = parent_pipeline
-        self.did_clean = clean_points
         self.arms = np.array(equalize_arm_length(arms))
         self.phi = parent_pipeline.phi
         self.ba = parent_pipeline.ba
@@ -43,6 +42,7 @@ class Arm():
             )
         else:
             self.outlier_mask = np.ones(self.R_all.shape[0], dtype=bool)
+        self.did_clean = clean_points
         self.groups = self.groups_all[self.outlier_mask]
         self.R = self.R_all[self.outlier_mask]
         self.t = self.t_all_unwrapped[self.outlier_mask]

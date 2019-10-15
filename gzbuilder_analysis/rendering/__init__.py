@@ -22,7 +22,7 @@ def asinh_stretch(px, a=0.6):
     return asinh(px / a) / asinh(a)
 
 
-def calculate_model(model, image_size=256, psf=None, oversample_n=5):
+def calculate_model(model, image_size=(256, 256), psf=None, oversample_n=5):
     """Render a model and convolve it with a psf (if provided)
     """
     disk_arr = oversampled_sersic_component(

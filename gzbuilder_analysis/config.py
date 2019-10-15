@@ -44,9 +44,9 @@ COMPONENT_CLUSTERING_PARAMS = {
 
 # Defaults for fitting
 FIT_PARAMS = {
-    'disk':   ('mux', 'muy', 'i0', 'rEff', 'axRatio'),
-    'bulge':  ('mux', 'muy', 'i0', 'rEff', 'axRatio', 'n'),
-    'bar':    ('mux', 'muy', 'i0', 'rEff', 'axRatio', 'n', 'c'),
+    'disk':   ('i0', 'rEff', 'axRatio'),
+    'bulge':  ('i0', 'rEff', 'axRatio', 'n'),
+    'bar':    ('i0', 'rEff', 'axRatio', 'n', 'c'),
     'spiral': ('i0', 'spread', 'falloff'),
 }
 
