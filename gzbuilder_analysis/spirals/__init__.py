@@ -17,7 +17,7 @@ def xy_from_r_theta(r, theta, mux=0, muy=0):
     return np.stack((mux + r * np.cos(theta), muy + r * np.sin(theta)))
 
 
-def get_drawn_arms(classifications, clean=True):
+def get_drawn_arms(classifications, clean=True, image_size=None):
     """Given classifications for a galaxy, get the non-self-overlapping drawn
     spirals arms
     """
@@ -30,11 +30,19 @@ def get_drawn_arms(classifications, clean=True):
         [[[p['x'], p['y']] for p in a] for a in c]
         for c in spirals if all([len(a) > 5 for a in c])
     )
-    return np.array([
-        np.array(arm) for classification in spirals_with_length_cut
+    arms = np.array([
+        np.array(arm)
+        for classification in spirals_with_length_cut
         for arm in classification
         if not clean or LineString(arm).is_simple
     ])
+    if image_size is not None:
+        # reverse the y-axis
+        return np.array([
+            (1, -1) * (arm - (0, image_size[0]))
+            for arm in arms
+        ])
+    return arms
 
 
 def split_arms_at_center(arms, image_size=512, threshold=10):

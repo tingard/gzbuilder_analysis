@@ -54,17 +54,22 @@ def sersic_component(comp, x, y):
     return sersic2d(x=x, y=y, **comp)
 
 
-def oversampled_sersic_component(comp, image_size=512, oversample_n=1):
+def oversampled_sersic_component(comp, image_size=(256, 256), oversample_n=1):
     if comp is None:
-        return np.zeros((image_size, image_size))
-    ds = np.linspace(
+        return np.zeros(image_size)
+    dsx = np.linspace(
         0.5/oversample_n - 0.5,
-        image_size - 0.5 - 0.5/oversample_n,
-        image_size*oversample_n
+        image_size[0] - 0.5 - 0.5/oversample_n,
+        image_size[0]*oversample_n
     )
-    cx, cy = np.meshgrid(ds, ds)
+    dsy = np.linspace(
+        0.5/oversample_n - 0.5,
+        image_size[1] - 0.5 - 0.5/oversample_n,
+        image_size[1]*oversample_n
+    )
+    cx, cy = np.meshgrid(dsx, dsy)
     return sersic_component(
         comp, cx, cy,
     ).reshape(
-        image_size, oversample_n, image_size, oversample_n,
+        image_size[0], oversample_n, image_size[1], oversample_n,
     ).mean(3).mean(1)

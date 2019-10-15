@@ -94,7 +94,7 @@ class Model():
                 spiral_arm(
                     *s,
                     model['disk'],
-                    image_size=self.data.shape[0],
+                    image_size=self.data.shape,
                 )
                 for s in model['spiral']
             ])
@@ -102,7 +102,7 @@ class Model():
             return np.zeros_like(self.data)
         return oversampled_sersic_component(
             model[comp_name],
-            image_size=self.data.shape[0],
+            image_size=self.data.shape,
             oversample_n=oversample_n,
         )
 
