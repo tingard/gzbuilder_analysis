@@ -2,33 +2,25 @@ import numpy as np
 from numba import jit
 
 
-# image manipulation
 @jit(nopython=True)
-def asinh(px):
-    return np.log(px + np.sqrt(1.0 + (px * px)))
+def calc_rolled_coordinates(x, y, mux, muy, roll):
+    xp = x * np.cos(roll) - y * np.sin(roll) - mux * np.cos(roll) + muy * np.sin(roll)
+    yp = x * np.sin(roll) + y * np.cos(roll) - mux * np.sin(roll) - muy * np.cos(roll)
+    return xp, yp
 
 
 @jit(nopython=True)
-def asinh_stretch(px, i=0.6):
-    return asinh(px / i) / asinh(i)
-
-
-# rendering functions
-@jit(nopython=True)
-def calc_boxy_ellipse_dist(x, y, mux, muy, roll, rEff, axRatio, c):
-    xPrime = x * np.cos(roll) \
-        - y * np.sin(roll) + mux \
-        - mux * np.cos(roll) + muy * np.sin(roll)
-    yPrime = x * np.sin(roll) \
-        + y * np.cos(roll) + muy \
-        - muy * np.cos(roll) - mux * np.sin(roll)
-    # return a scaled version of the radius (multiplier is chosen so svg tool
-    # doesn't impact badly on shown model component)
-    return 3.0 * np.power(
-        np.power(axRatio / rEff, c) * np.power(np.abs(xPrime - mux), c)
-        + np.power(np.abs(yPrime - muy), c) / np.power(rEff, c),
+def calc_r(xp, yp, mux, muy, q, c):
+    return np.power(
+        np.power(np.abs(xp - mux), c) + np.power(np.abs((yp - muy) / q), c),
         1 / c
     )
+
+
+@jit(nopython=True)
+def boxy_rolled_radius(x, y, mux, muy, roll, q, c):
+    xp, yp = calc_rolled_coordinates(x, y, mux, muy, roll)
+    return calc_r(xp, yp, mux, muy, q, c)
 
 
 @jit(nopython=True)
@@ -40,18 +32,11 @@ def _b(n):
 
 
 @jit(nopython=True)
-def sersic2d(x=0, y=0, mux=0, muy=0, roll=0, rEff=1, axRatio=1, c=2, i0=1, n=1):
+def sersic2d(x=0, y=0, mux=0, muy=0, roll=0, Re=1, q=1, c=2, I=1, n=1):
     # https://www.cambridge.org/core/services/aop-cambridge-core/content/view/S132335800000388X
-    return 0.5 * i0 * np.exp(
-        _b(n) * (1 - np.power(
-            calc_boxy_ellipse_dist(x, y, mux, muy, roll, rEff, axRatio, c),
-            1.0 / n
-        ))
-    )
-
-
-def sersic_component(comp, x, y):
-    return sersic2d(x=x, y=y, **comp)
+    # note that we rename q from above to q here
+    r = boxy_rolled_radius(x, y, mux, muy, roll, q, c)
+    return I * np.exp(-_b(n) * np.power(r / Re, 1.0/n))
 
 
 def oversampled_sersic_component(comp, image_size=(256, 256), oversample_n=1):
@@ -68,8 +53,8 @@ def oversampled_sersic_component(comp, image_size=(256, 256), oversample_n=1):
         image_size[1]*oversample_n
     )
     cx, cy = np.meshgrid(dsx, dsy)
-    return sersic_component(
-        comp, cx, cy,
+    return sersic2d(
+        cx, cy, **comp
     ).reshape(
         image_size[0], oversample_n, image_size[1], oversample_n,
     ).mean(3).mean(1)
