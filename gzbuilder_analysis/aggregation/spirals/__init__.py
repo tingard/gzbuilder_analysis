@@ -1,4 +1,5 @@
 import numpy as np
+import pandas as pd
 from scipy.optimize import minimize
 from shapely.geometry import LineString
 from scipy.interpolate import splprep, splev, interp1d
@@ -17,32 +18,23 @@ def xy_from_r_theta(r, theta, mux=0, muy=0):
     return np.stack((mux + r * np.cos(theta), muy + r * np.sin(theta)))
 
 
-def get_drawn_arms(classifications, clean=True, image_size=None):
-    """Given classifications for a galaxy, get the non-self-overlapping drawn
-    spirals arms
+def get_drawn_arms(models, min_n=5):
+    """Extract the drawn spiral arms from a Series of models, removing
+    self-intersecting lines and lines with fewer than min_n points
     """
-    spirals = (
-        [a['points'] for a in c[3]['value'][0]['value']]
-        for c in classifications['annotations'].apply(json.loads).values
-        if len(c) > 3 and len(c[3]['value'][0]['value']) > 0
-    )
-    spirals_with_length_cut = (
-        [[[p['x'], p['y']] for p in a] for a in c]
-        for c in spirals if all([len(a) > 5 for a in c])
-    )
-    arms = np.array([
-        np.array(arm)
-        for classification in spirals_with_length_cut
-        for arm in classification
-        if not clean or LineString(arm).is_simple
-    ])
-    if image_size is not None:
-        # reverse the y-axis
-        return np.array([
-            (1, -1) * (arm - (0, image_size[0]))
-            for arm in arms
-        ])
-    return arms
+    tuples = [
+        (i, j)
+        for i in models.index
+        for j in range(len(models.loc[i]['spiral']))
+    ]
+    idx = pd.MultiIndex.from_tuples(tuples, names=['model_index', 'arm_index'])
+    return pd.Series([
+        points
+        if len(points) > min_n and LineString(points).is_simple
+        else np.nan
+        for _,  model in models.iteritems()
+        for i, (points, params) in enumerate(model['spiral'])
+    ], index=idx).dropna()
 
 
 def split_arms_at_center(arms, image_size=512, threshold=10):
@@ -156,3 +148,27 @@ def pa_from_r_theta(r, th):
     return np.rad2deg(np.arctan(
         np.gradient(np.log(r), th)
     ))
+
+
+# def deproject_drawn_arms(drawn_arms, phi, ba):
+#     """Correct for a galaxy's inclination by deprojecting its ellipticity back
+#     to a circle
+#     """
+#     pass
+#
+#
+# def split_arms_at_centre(drawn_arms, centre_size):
+#     """Split arms and remove points within a central radius
+#     """
+#     pass
+#
+#
+# def cluster_spirals(drawn_arms, image_size=(512, 512), centre_size=0.02):
+#     """Cluster an array of drawn arms and return the points in each cluster,
+#     splitting arms and removing points at the centre
+#     """
+#     pass
+#
+#
+# def fit_log_spirals(point_cloud, clean=True):
+#     pass

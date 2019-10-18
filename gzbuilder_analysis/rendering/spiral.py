@@ -1,6 +1,6 @@
 import numpy as np
 from numba import jit, prange
-from gzbuilder_analysis.rendering.sersic import sersic_component
+from gzbuilder_analysis.rendering.sersic import sersic2d
 from gzbuilder_analysis.config import DEFAULT_DISK, DEFAULT_SPIRAL
 
 
@@ -35,9 +35,9 @@ def spiral_arm(arm_points, params=DEFAULT_SPIRAL, disk=DEFAULT_DISK,
 
     cx, cy = np.meshgrid(np.arange(image_size[1]), np.arange(image_size[0]))
 
-    disk_arr = sersic_component(
-        {**disk, 'i0': 1, 'rEff': disk['rEff'] / params['falloff']},
-        cx, cy
+    disk_arr = sersic2d(
+        cx, cy,
+        **{**disk, 'I': 1, 'Re': disk['Re'] / params['falloff']},
     )
     if arm_distances is None:
         arm_distances = spiral_distance_numba(
@@ -46,7 +46,7 @@ def spiral_arm(arm_points, params=DEFAULT_SPIRAL, disk=DEFAULT_DISK,
         )
 
     return (
-        params['i0']
+        params['I']
         * np.exp(-arm_distances**2 * 0.1 / max(params['spread'], 1E-10))
         * disk_arr
     )

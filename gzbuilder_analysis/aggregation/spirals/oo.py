@@ -6,12 +6,12 @@ from sklearn.cluster import DBSCAN
 from sklearn.metrics import median_absolute_error
 from sklearn.model_selection import GroupKFold
 from gzbuilder_analysis.config import ARM_CLUSTERING_PARAMS
-from gzbuilder_analysis.spirals import equalize_arm_length
-from gzbuilder_analysis.spirals import split_arms_at_center
-from gzbuilder_analysis.spirals import xy_from_r_theta, r_theta_from_xy
-from gzbuilder_analysis.spirals import metric, cleaning
-from gzbuilder_analysis.spirals import deprojecting, fitting
-from gzbuilder_analysis.spirals import get_pitch_angle, get_sample_weight
+from gzbuilder_analysis.aggregation.spirals import equalize_arm_length
+from gzbuilder_analysis.aggregation.spirals import split_arms_at_center
+from gzbuilder_analysis.aggregation.spirals import xy_from_r_theta, r_theta_from_xy
+from gzbuilder_analysis.aggregation.spirals import metric, cleaning
+from gzbuilder_analysis.aggregation.spirals import deprojecting, fitting
+from gzbuilder_analysis.aggregation.spirals import get_pitch_angle, get_sample_weight
 
 
 class Arm():
