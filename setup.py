@@ -1,4 +1,4 @@
-from setuptools import setup
+from setuptools import setup, find_packages
 
 setup(name='gzbuilder_analysis',
       version='0.1',
@@ -6,7 +6,7 @@ setup(name='gzbuilder_analysis',
       author='Tim Lingard',
       author_email='tklingard@gmail.com',
       license='MIT',
-      packages=['gzbuilder_analysis'],
+      packages=find_packages(),
       install_requires=[
           'numpy',
           'scipy',
