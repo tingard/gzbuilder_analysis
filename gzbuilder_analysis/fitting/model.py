@@ -6,7 +6,10 @@ from scipy.signal import convolve2d
 from tqdm import tqdm
 from gzbuilder_analysis.parsing import sanitize_model
 import gzbuilder_analysis.rendering as rg
-from gzbuilder_analysis.rendering.sersic import oversampled_sersic_component
+try:
+    from gzbuilder_analysis.rendering.cuda.sersic import oversampled_sersic_component
+except ModuleNotFoundError:
+    from gzbuilder_analysis.rendering.sersic import oversampled_sersic_component
 from gzbuilder_analysis.rendering.spiral import spiral_distance_numba, spiral_arm
 from . import chisq
 from gzbuilder_analysis.config import ALL_PARAMS, FIT_PARAMS, PARAM_BOUNDS, DEFAULT_DISK
