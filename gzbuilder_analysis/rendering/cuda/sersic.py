@@ -36,7 +36,7 @@ def sersic2d(x=0, y=0, mux=0, muy=0, roll=0, Re=1, q=1, c=2, I=1, n=1):
     return I * _p.exp(-_b(n) * (_p.power(r / Re, 1.0/n) - 1))
 
 
-def oversampled_sersic_component(comp, image_size=(256, 256), oversample_n=5, cuda=True):
+def oversampled_sersic_component(comp, image_size=(256, 256), oversample_n=5, cuda=True, return_numpy=False):
     if cuda:
         _p = cp
     else:
@@ -54,8 +54,11 @@ def oversampled_sersic_component(comp, image_size=(256, 256), oversample_n=5, cu
         image_size[1]*oversample_n
     )
     cx, cy = _p.meshgrid(dsx, dsy)
-    return sersic2d(
+    render = sersic2d(
         cx, cy, **comp
     ).reshape(
         image_size[0], oversample_n, image_size[1], oversample_n,
     ).mean(3).mean(1)
+    if return_numpy:
+        return cp.asnumpy(render)
+    return render

@@ -132,6 +132,7 @@ class Model():
                         self.params.dropna()[k].to_dict(),
                         image_size=self.data.shape,
                         oversample_n=oversample_n,
+                        return_numpy=True,
                     )
                 except KeyError:
                     self._cache[k] = 0

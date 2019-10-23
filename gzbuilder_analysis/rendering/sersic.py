@@ -38,7 +38,7 @@ def sersic2d(x=0, y=0, mux=0, muy=0, roll=0, Re=1, q=1, c=2, I=1, n=1):
     return I * np.exp(-_b(n) * (np.power(r / Re, 1.0/n) - 1))
 
 
-def oversampled_sersic_component(comp, image_size=(256, 256), oversample_n=5):
+def oversampled_sersic_component(comp, image_size=(256, 256), oversample_n=5, **kwargs):
     if comp is None:
         return np.zeros(image_size)
     dsx = np.linspace(
