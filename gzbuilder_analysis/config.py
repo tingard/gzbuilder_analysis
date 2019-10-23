@@ -8,6 +8,7 @@ DEFAULT_DISK = {
     'Re': 100.0,
     'q': 1.0,
     'c': 2.0,
+    'I': 1.0,
 }
 
 DEFAULT_SPIRAL = {
@@ -43,6 +44,12 @@ COMPONENT_CLUSTERING_PARAMS = {
 
 
 # Defaults for fitting
+ALL_PARAMS = {
+    'disk':   ('mux', 'muy', 'roll', 'Re', 'q', 'I', 'n', 'c'),
+    'bulge':  ('mux', 'muy', 'roll', 'Re', 'q', 'I', 'n', 'c'),
+    'bar':    ('mux', 'muy', 'roll', 'Re', 'q', 'I', 'n', 'c'),
+    'spiral': ('I', 'spread', 'falloff'),
+}
 FIT_PARAMS = {
     'disk':   ('I', 'Re', 'q'),
     'bulge':  ('I', 'Re', 'q', 'n'),
@@ -50,17 +57,24 @@ FIT_PARAMS = {
     'spiral': ('I', 'spread', 'falloff'),
 }
 
-SLIDER_FITTING_TEMPLATE = (
-    ('disk', 'I'),
-    ('bulge', 'I'),
-    ('bulge', 'n'),
-    ('bar', 'I'),
-    ('bar', 'n'),
-    ('bar', 'c'),
-    ('spiral', 'I'),
-    ('spiral', 'falloff'),
-    ('spiral', 'spread'),
-)
+SLIDER_FIT_PARAMS = {
+    'disk': ('I',),
+    'bulge': ('I', 'n'),
+    'bar': ('I', 'n', 'c'),
+    'spiral': ('I', 'spread', 'falloff'),
+}
+
+# SLIDER_FITTING_TEMPLATE = (
+#     ('disk', 'I'),
+#     ('bulge', 'I'),
+#     ('bulge', 'n'),
+#     ('bar', 'I'),
+#     ('bar', 'n'),
+#     ('bar', 'c'),
+#     ('spiral', 'I'),
+#     ('spiral', 'falloff'),
+#     ('spiral', 'spread'),
+# )
 
 PARAM_BOUNDS = {
     'I': (0, np.inf),

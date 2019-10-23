@@ -22,15 +22,16 @@ def deproject_array(arr, angle=0, ba=1):
 
 
 def deproject_arm(arm, angle=0, ba=1):
-    """Given an array of xy pairs, an axis ratio, and a rotation angle, rotate
-    the points about the origin and scale outwards along the y axis
+    """Given an array of xy pairs, an axis ratio, and a rotation angle
+    (in degrees), rotate the points about the origin and scale outwards along
+    the y axis
     """
-    p = np.deg2rad(angle)
+    a = -np.deg2rad(angle)
     rotation_matrix = np.array(
-        ((np.cos(p), -np.sin(p)), (np.sin(p), np.cos(p)))
+        ((np.cos(a), np.sin(a)), (-np.sin(a), np.cos(a)))
     )
     rotated_arm = np.dot(rotation_matrix, arm.T)
-    stretched_arm = rotated_arm.T * (1, 1/ba)
+    stretched_arm = rotated_arm.T * (1/ba, 1)
     return stretched_arm
 
 

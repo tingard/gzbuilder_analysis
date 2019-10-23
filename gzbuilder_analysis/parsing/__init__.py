@@ -10,7 +10,7 @@ def __has_drawn_component(comp):
     return len(comp['value'][0]['value']) > 0
 
 
-def parse_sersic_comp(comp, image_size, ignore_scale=False):
+def parse_sersic_comp(comp, image_size, ignore_scale=False, **kwargs):
     if not __has_drawn_component(comp):
         return None
     drawing = comp['value'][0]['value'][0]
@@ -20,8 +20,7 @@ def parse_sersic_comp(comp, image_size, ignore_scale=False):
     out = {
         'mux': drawing['x'],
         'muy': image_size[0] - drawing['y'],
-        # zooniverse rotation goes in the wrong direction
-        'roll': -np.deg2rad(roll),
+        'roll': np.deg2rad(roll),
         # in the original rendering code, minor axis was used instead of major
         'Re': max(
             1e-5,
@@ -35,7 +34,7 @@ def parse_sersic_comp(comp, image_size, ignore_scale=False):
             float(comp['value'][2]['value'])
             if comp['value'][2]['value'] is not None
             else 0.2
-        ) / 1.6, # correct for a factor of 2 and a 0.8 multiplier to standardise
+        ) / (2 * 0.8), # correct for a factor of 2 and a 1/0.8 multiplier to standardise
         'c': 2,
         'n': 1,
     }
@@ -62,12 +61,12 @@ def parse_bar_comp(comp, *args, **kwargs):
     return parse_sersic_comp(_comp, *args, **kwargs)
 
 
-def parse_spiral_comp(comp, image_size, size_diff=1):
+def parse_spiral_comp(comp, image_size, size_diff=1, **kwargs):
     out = []
     for arm in comp['value'][0]['value']:
         points = np.array(
             [
-                [p['x'], p['y']]
+                [p['x'], image_size[1] - p['y']]
                 for p in arm['points']
             ],
             dtype='float'
@@ -75,7 +74,7 @@ def parse_spiral_comp(comp, image_size, size_diff=1):
         params = {
             # correct for 0.8 multiplier in original rendering code
             'I': float(arm['details'][0]['value']) / 0.8,
-            'spread': float(arm['details'][1]['value']),
+            'spread': float(arm['details'][1]['value']) * size_diff,
             'falloff': max(float(comp['value'][1]['value']), 1E-5),
         }
         out.append((points, params))
@@ -120,7 +119,10 @@ def scale_model(model, scale):
             model_out[comp]['muy'] *= scale
             model_out[comp]['Re'] *= scale
         model_out['spiral'] = [
-            [points * scale, {**params, 'spread': params['spread'] * scale}]
+            [
+                points * scale,
+                {**params, 'spread': params.get('spread', np.nan) * scale}
+            ]
             for points, params in model['spiral']
         ]
     return model_out
@@ -142,3 +144,10 @@ def sanitize_model(model):
     except AttributeError:
         pass
     return model
+
+
+def make_json(model):
+    return json.dumps({
+        **model,
+        'spiral': [(points.tolist(), params) for points, params in model['spiral']]
+    })

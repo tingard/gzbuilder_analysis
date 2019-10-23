@@ -198,29 +198,31 @@ class Arm():
 
 class Pipeline():
     def __init__(self, drawn_arms, phi=0.0, ba=1.0, distances=None,
-                 bar_length=10, centre_size=20, image_size=512,
+                 bar_length=10/512, centre_threshold=20/512, image_size=512,
                  clustering_kwargs={}, parallel=False):
         self.drawn_arms = np.array(
             split_arms_at_center(
                 np.array(drawn_arms),
                 image_size=image_size,
-                threshold=centre_size,
+                threshold=image_size*centre_threshold,
             )
         )
         self.image_size = float(image_size)
         self.phi = float(phi)
         self.ba = float(ba)
-        self.bar_length = bar_length
+        self.bar_length = bar_length * image_size
+        self.scaled_arms = np.array([
+            512/image_size * arm for arm in self.drawn_arms
+        ])
         if distances is None:
             cdm = (metric.calculate_distance_matrix_parallel if parallel
                    else metric.calculate_distance_matrix)
             if parallel:
-                self.distances = cdm(self.drawn_arms)
+                self.distances = cdm(self.scaled_arms)
             else:
-                self.distances = cdm(self.drawn_arms)
+                self.distances = cdm(self.scaled_arms)
         else:
             self.distances = distances
-
         self.db = DBSCAN(
             eps=clustering_kwargs.setdefault(
                 'eps',
@@ -256,7 +258,7 @@ class Pipeline():
 
     def merge_arms(self, arms, threshold=500):
         arms = np.array(arms)
-        logsps = [arm.reprojected_log_spiral for arm in arms]
+        logsps = [512 / self.image_size * arm.reprojected_log_spiral for arm in arms]
         pairs = []
         for i in range(len(logsps)):
             for j in range(i+1, len(logsps)):

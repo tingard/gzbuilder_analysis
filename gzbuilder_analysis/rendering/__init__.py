@@ -41,11 +41,12 @@ def calculate_model(model, image_size=(256, 256), psf=None, oversample_n=5):
     )
     spirals_arr = np.add.reduce([
         spiral_arm(
-            *s,
-            model['disk'],
+            arm_points=points,
+            params=params,
+            disk=model['disk'],
             image_size=image_size,
         )
-        for s in model['spiral']
+        for points, params in model['spiral']
     ])
     model = disk_arr + bulge_arr + bar_arr + spirals_arr
     if psf is not None:
