@@ -46,7 +46,7 @@ def calculate_model(model, image_size=(256, 256), psf=None, oversample_n=5):
         )
         for points, params in model['spiral']
     ])
-    model = (disk_arr + bulge_arr + bar_arr).get() + spirals_arr
+    model = cp.asnumpy(disk_arr + bulge_arr + bar_arr) + spirals_arr
     if psf is not None:
-        return convolve2d(model.get(), psf, mode='same', boundary='symm')
+        return convolve2d(model, psf, mode='same', boundary='symm')
     return model

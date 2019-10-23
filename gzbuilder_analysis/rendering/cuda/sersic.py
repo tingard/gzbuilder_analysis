@@ -42,7 +42,7 @@ def oversampled_sersic_component(comp, image_size=(256, 256), oversample_n=5, cu
     else:
         _p = np
     if comp is None:
-        return cp.zeros(image_size)
+        return _p.zeros(image_size)
     dsx = _p.linspace(
         0.5/oversample_n - 0.5,
         image_size[0] - 0.5 - 0.5/oversample_n,
