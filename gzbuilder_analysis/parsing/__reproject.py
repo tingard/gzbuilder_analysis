@@ -40,7 +40,7 @@ def reproject_sersic(comp, wcs_in, wcs_out):
         **comp,
         'mux': new_centre[0],
         'muy': new_centre[1],
-        'roll': np.arctan2(*(new_major_axis - new_centre)[::-1]),
+        'roll': -np.arctan2(*(new_major_axis - new_centre)[::-1]),
         'Re': np.sqrt(np.add.reduce((new_major_axis - new_centre)**2)),
     }
     comp_out['q'] = np.sqrt(
