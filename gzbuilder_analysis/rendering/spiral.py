@@ -5,7 +5,7 @@ from gzbuilder_analysis.config import DEFAULT_DISK, DEFAULT_SPIRAL
 
 
 @jit(nopython=True, parallel=True)
-def spiral_distance(poly_line, distances=np.zeros((100, 100))):
+def spiral_distance_numba(poly_line, distances=np.zeros((100, 100))):
     for i in prange(distances.shape[0]):
         for j in range(distances.shape[1]):
             best = 1E30

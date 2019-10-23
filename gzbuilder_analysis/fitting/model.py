@@ -13,7 +13,8 @@ from gzbuilder_analysis.config import ALL_PARAMS, FIT_PARAMS, PARAM_BOUNDS, DEFA
 
 
 class Model():
-    def __init__(self, model, galaxy_data, psf=None, sigma_image=None):
+    def __init__(self, model, galaxy_data, psf=None, sigma_image=None,
+                 cancel_initial_render=False):
         self.data = galaxy_data
         self.psf = psf
         self.sigma_image = sigma_image
@@ -37,7 +38,8 @@ class Model():
             spiral=np.zeros_like(galaxy_data)
         ), name='cache')
         # populate the cache
-        self.render(force=True)
+        if not cancel_initial_render:
+            self.render(force=True)
 
     def __define_params(self):
         __model_index = pd.MultiIndex.from_tuples(
@@ -53,7 +55,8 @@ class Model():
         )
         self.params = pd.Series(np.nan, index=__model_index)
 
-    def __get_params(self, model):
+    @staticmethod
+    def __get_params(model):
         # filter out empty components
         model = {k: v for k, v in model.items() if v is not None}
 
@@ -106,15 +109,17 @@ class Model():
             params = self.__get_params(model)
         if force:
             # render everything
-            components = ['disk', 'bulge', 'bar', 'spiral']
+            components = {'disk', 'bulge', 'bar', 'spiral'}
         else:
             # only render components that have changed
             mask = (self.params - params) != 0
-            components = np.unique(
+            components = set(
                 params[mask].index.levels[0][
                     params[mask].index.codes[0]
                 ]
             )
+        if 'disk' in components and not 'spiral' in components:
+            components |= {'spiral'}
         # update the cached params
         self.params[params.index] = params
         for k in components:
