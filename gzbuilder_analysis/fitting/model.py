@@ -1,3 +1,4 @@
+import re
 import pandas as pd
 import numpy as np
 from copy import deepcopy
@@ -12,7 +13,7 @@ except ModuleNotFoundError:
     from gzbuilder_analysis.rendering.sersic import oversampled_sersic_component
 from gzbuilder_analysis.rendering.spiral import spiral_distance_numba, spiral_arm
 from . import chisq
-from gzbuilder_analysis.config import ALL_PARAMS, FIT_PARAMS, PARAM_BOUNDS, DEFAULT_DISK
+import gzbuilder_analysis.config as cfg
 
 
 class Model():
@@ -24,7 +25,7 @@ class Model():
         self.nspirals = len(model['spiral'])
         self.__define_params()
         # populate self.params with the provided model
-        params = self.__get_params(model)
+        params = self.get_params(model)
         self.params[params.index] = params
         self.spiral_points = np.array([points for points, params in model['spiral']])
         if len(model['spiral']) > 0:
@@ -47,19 +48,19 @@ class Model():
     def __define_params(self):
         __model_index = pd.MultiIndex.from_tuples(
             [
-                (comp, param) for comp in ALL_PARAMS.keys()
-                for param in ALL_PARAMS[comp] if comp is not 'spiral'
+                (comp, param) for comp in cfg.ALL_PARAMS.keys()
+                for param in cfg.ALL_PARAMS[comp] if comp is not 'spiral'
             ] + [
                 (f'spiral{i}', param)
                 for i in range(self.nspirals)
-                for param in ALL_PARAMS['spiral']
+                for param in cfg.ALL_PARAMS['spiral']
             ],
             names=('component', 'parameter')
         )
         self.params = pd.Series(np.nan, index=__model_index)
 
     @staticmethod
-    def __get_params(model):
+    def get_params(model):
         # filter out empty components
         model = {k: v for k, v in model.items() if v is not None}
 
@@ -109,19 +110,20 @@ class Model():
             params = self.params
         elif params is None:
             # get params from the model provided
-            params = self.__get_params(model)
+            params = self.get_params(model)
         if force:
             # render everything
             components = {'disk', 'bulge', 'bar', 'spiral'}
         else:
             # only render components that have changed
-            mask = (self.params - params) != 0
-            components = set(
-                params[mask].index.levels[0][
-                    params[mask].index.codes[0]
+            keep_idx = (self.params - params).where(lambda v: v != 0).dropna().index
+            components = {
+                re.sub(r'[0-9]+', '', i) for i in
+                keep_idx.levels[0][
+                    keep_idx.codes[0]
                 ]
-            )
-        if 'disk' in components and not 'spiral' in components:
+            }
+        if 'disk' in components:
             components |= {'spiral'}
         # update the cached params
         self.params[params.index] = params
@@ -146,13 +148,13 @@ class Model():
                     )
                     for i in range(len(self.spiral_distances))
                 ], axis=0)
-        result = np.zeros_like(self.data) + np.sum(self._cache.values, axis=0)
+        result = np.zeros(self.data.shape) + np.sum(self._cache.values, axis=0)
         if self.psf is not None:
             result = convolve2d(result, self.psf, mode='same', boundary='symm')
         return result
 
 
-def fit_model(model_obj, params=FIT_PARAMS, progress=True, **kwargs):
+def fit_model(model_obj, params=cfg.FIT_PARAMS, progress=True, **kwargs):
     """Optimize a model object to minimise its chi-squared (note that this
     mutates model_obj.params and changes the cached component arrays)
     """
@@ -162,14 +164,15 @@ def fit_model(model_obj, params=FIT_PARAMS, progress=True, **kwargs):
         for i in range(len(model_obj.spiral_distances))
         for v in params['spiral']
     ]
-    bounds = [PARAM_BOUNDS[param] for comp, param in tuples]
-    p0 = model_obj.params[tuples]
+    p0 = model_obj.params[tuples].dropna()
+    bounds = [cfg.PARAM_BOUNDS[param] for param in p0.index.levels[1][p0.index.codes[1]]]
     def _func(p):
         new_params = pd.Series(p, index=p0.index)
         r = model_obj.render(params=new_params)
         return chisq(r, model_obj.data, model_obj.sigma_image)
     print(f'Optimizing {len(p0)} parameters')
     print(f'Original chisq: {_func(p0.values):.4f}')
+    print()
     if progress:
         with tqdm(desc='Fitting model', leave=True) as pbar:
             pbar.set_description(f'chisq={_func(p0):.4f}')
@@ -181,6 +184,6 @@ def fit_model(model_obj, params=FIT_PARAMS, progress=True, **kwargs):
         res = minimize(_func, p0, bounds=bounds, **kwargs)
     print(f'Final chisq: {res["fun"]:.4f}')
     final_params = model_obj.params.copy()
-    final_params[tuples] = res['x']
+    final_params[p0.index] = res['x']
     tuned_model = model_obj.to_dict(params=final_params)
     return res, tuned_model
