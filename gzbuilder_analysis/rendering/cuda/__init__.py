@@ -1,9 +1,8 @@
-import numpy as np
 import cupy as cp
 from copy import deepcopy
 from scipy.signal import convolve2d
 from .sersic import oversampled_sersic_component
-from gzbuilder_analysis.rendering.spiral import spiral_arm
+from .spiral import spiral_arm
 
 # image manipulation
 def asinh(arr):
@@ -37,7 +36,7 @@ def calculate_model(model, image_size=(256, 256), psf=None, oversample_n=5):
         image_size=image_size,
         oversample_n=oversample_n
     )
-    spirals_arr = np.add.reduce([
+    spirals_arr = sum([
         spiral_arm(
             arm_points=points,
             params=params,
@@ -46,7 +45,7 @@ def calculate_model(model, image_size=(256, 256), psf=None, oversample_n=5):
         )
         for points, params in model['spiral']
     ])
-    model = cp.asnumpy(disk_arr + bulge_arr + bar_arr) + spirals_arr
+    model = cp.asnumpy(disk_arr + bulge_arr + bar_arr + spirals_arr)
     if psf is not None:
         return convolve2d(model, psf, mode='same', boundary='symm')
     return model
