@@ -1,6 +1,7 @@
 import json
 from copy import deepcopy
 import numpy as np
+import pandas as pd
 from gzbuilder_analysis.parsing.__reproject import reproject_model
 from shapely.affinity import scale as shapely_scale
 from shapely.affinity import translate as shapely_translate
@@ -144,6 +145,27 @@ def sanitize_model(model):
     except AttributeError:
         pass
     return model
+
+
+def to_pandas(model):
+    # filter out empty components
+    model = {k: v for k, v in model.items() if v is not None}
+
+    params = {
+        f'{comp} {param}': model[comp][param]
+        for comp in ('disk', 'bulge', 'bar')
+        for param in model.get(comp, {}).keys()
+    }
+    params.update({
+        f'spiral{i} {param}': model['spiral'][i][1][param]
+        for i in range(len(model['spiral']))
+        for param in model['spiral'][i][1].keys()
+    })
+    idx = pd.MultiIndex.from_tuples([
+        k.split() for k in params.keys()
+    ], names=('component', 'parameter'))
+    vals = [params.get(' '.join(p), np.nan) for p in idx.values]
+    return pd.Series(vals, index=idx, name='value')
 
 
 def make_json(model):

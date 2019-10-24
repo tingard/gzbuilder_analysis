@@ -9,7 +9,7 @@ from copy import deepcopy
 from scipy.optimize import minimize
 from scipy.signal import convolve2d
 from tqdm import tqdm
-from gzbuilder_analysis.parsing import sanitize_model
+from gzbuilder_analysis.parsing import sanitize_model, to_pandas
 try:
     import gzbuilder_analysis.rendering.cuda as rg
     from gzbuilder_analysis.rendering.cuda.spiral import spiral_distance
@@ -29,7 +29,7 @@ class Model():
         self.nspirals = len(model['spiral'])
         self.__define_params()
         # populate self.params with the provided model
-        params = self.get_params(model)
+        params = to_pandas(model)
         self.params[params.index] = params
         self.spiral_points = np.array([points for points, params in model['spiral']])
         if len(model['spiral']) > 0:
@@ -63,27 +63,6 @@ class Model():
         )
         self.params = pd.Series(np.nan, index=__model_index)
 
-    @staticmethod
-    def get_params(model):
-        # filter out empty components
-        model = {k: v for k, v in model.items() if v is not None}
-
-        params = {
-            f'{comp} {param}': model[comp][param]
-            for comp in ('disk', 'bulge', 'bar')
-            for param in model.get(comp, {}).keys()
-        }
-        params.update({
-            f'spiral{i} {param}': model['spiral'][i][1][param]
-            for i in range(len(model['spiral']))
-            for param in model['spiral'][i][1].keys()
-        })
-        idx = pd.MultiIndex.from_tuples([
-            k.split() for k in params.keys()
-        ], names=('component', 'parameter'))
-        vals = [params.get(' '.join(p), np.nan) for p in idx.values]
-        return pd.Series(vals, index=idx, name='value')
-
     def __call__(self, *args, **kwargs):
         return self.render(*args, **kwargs)
 
@@ -114,7 +93,7 @@ class Model():
             params = self.params
         elif params is None:
             # get params from the model provided
-            params = self.get_params(model)
+            params = to_pandas(model)
         if force:
             # render everything
             components = {'disk', 'bulge', 'bar', 'spiral'}

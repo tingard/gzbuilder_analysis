@@ -12,7 +12,7 @@ def spiral_distance(*args, **kwargs):
 
 
 def spiral_arm(arm_points=None, distances=None, params=DEFAULT_SPIRAL, disk=DEFAULT_DISK,
-               image_size=(256, 256), return_numpy=False):
+               image_size=(256, 256)):
     if arm_points is None and distances is None:
         raise TypeError(
             'Must provide either an (N,2) array of points,'
@@ -43,7 +43,4 @@ def spiral_arm(arm_points=None, distances=None, params=DEFAULT_SPIRAL, disk=DEFA
         * cp.exp(-distances**2 * 0.1 / max(params['spread'], 1E-10))
         * disk_arr
     )
-    # if return_numpy:
-    #     print('returning numpy')
-    #     return cp.asnumpy(render)
     return render
