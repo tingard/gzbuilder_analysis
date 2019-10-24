@@ -1,17 +1,21 @@
 import re
 import pandas as pd
 import numpy as np
+try:
+    from cupy import asnumpy
+except ModuleNotFoundError:
+    asnumpy = np.asarray
 from copy import deepcopy
 from scipy.optimize import minimize
 from scipy.signal import convolve2d
 from tqdm import tqdm
 from gzbuilder_analysis.parsing import sanitize_model
-import gzbuilder_analysis.rendering as rg
 try:
-    from gzbuilder_analysis.rendering.cuda.sersic import oversampled_sersic_component
+    import gzbuilder_analysis.rendering.cuda as rg
+    from gzbuilder_analysis.rendering.cuda.spiral import spiral_distance
 except ModuleNotFoundError:
-    from gzbuilder_analysis.rendering.sersic import oversampled_sersic_component
-from gzbuilder_analysis.rendering.spiral import spiral_distance_numba, spiral_arm
+    import gzbuilder_analysis.rendering as rg
+    from gzbuilder_analysis.rendering.spiral import spiral_distance
 from . import chisq
 import gzbuilder_analysis.config as cfg
 
@@ -29,18 +33,18 @@ class Model():
         self.params[params.index] = params
         self.spiral_points = np.array([points for points, params in model['spiral']])
         if len(model['spiral']) > 0:
-            self.spiral_distances = np.stack([
-                spiral_distance_numba(points, distances=np.zeros_like(galaxy_data))
+            self.spiral_distances = [
+                spiral_distance(points, distances=np.zeros_like(galaxy_data))
                 for points, params in model['spiral']
-            ])
+            ]
         else:
-            self.spiral_distances = np.array([])
+            self.spiral_distances = []
         self._cache = pd.Series(dict(
-            disk=np.zeros_like(galaxy_data),
-            bulge=np.zeros_like(galaxy_data),
-            bar=np.zeros_like(galaxy_data),
-            spiral=np.zeros_like(galaxy_data)
-        ), name='cache')
+            disk=0,
+            bulge=0,
+            bar=0,
+            spiral=0,
+        ), name='cache', dtype=object)
         # populate the cache
         if not cancel_initial_render:
             self.render(force=True)
@@ -130,25 +134,24 @@ class Model():
         for k in components:
             if 'spiral' not in k:
                 try:
-                    self._cache[k] = oversampled_sersic_component(
+                    self._cache[k] = rg.oversampled_sersic_component(
                         self.params.dropna()[k].to_dict(),
                         image_size=self.data.shape,
                         oversample_n=oversample_n,
-                        return_numpy=True,
                     )
                 except KeyError:
                     self._cache[k] = 0
             else:
-                self._cache['spiral'] = np.sum([
-                    spiral_arm(
+                self._cache['spiral'] = sum([
+                    rg.spiral_arm(
                         distances=self.spiral_distances[i],
                         params=self.params[f'spiral{i}'].to_dict(),
                         disk=self.params['disk'].to_dict(),
                         image_size=self.data.shape,
                     )
                     for i in range(len(self.spiral_distances))
-                ], axis=0)
-        result = np.zeros(self.data.shape) + np.sum(self._cache.values, axis=0)
+                ])
+        result = np.zeros(self.data.shape) + asnumpy(sum(self._cache.values))
         if self.psf is not None:
             result = convolve2d(result, self.psf, mode='same', boundary='symm')
         return result
@@ -169,7 +172,10 @@ def fit_model(model_obj, params=cfg.FIT_PARAMS, progress=True, **kwargs):
     def _func(p):
         new_params = pd.Series(p, index=p0.index)
         r = model_obj.render(params=new_params)
-        return chisq(r, model_obj.data, model_obj.sigma_image)
+        cq = chisq(r, model_obj.data, model_obj.sigma_image)
+        if np.isnan(cq):
+            return 1E5
+        return cq
     print(f'Optimizing {len(p0)} parameters')
     print(f'Original chisq: {_func(p0.values):.4f}')
     print()

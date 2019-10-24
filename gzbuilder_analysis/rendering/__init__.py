@@ -6,6 +6,11 @@ from gzbuilder_analysis.rendering.sersic import oversampled_sersic_component
 from gzbuilder_analysis.rendering.spiral import spiral_arm
 
 
+# mimic CuPy's get_array_module but always return numpy
+def get_array_module(*args):
+    return np
+
+
 # image manipulation
 @jit(nopython=True)
 def asinh(px):
@@ -52,37 +57,6 @@ def calculate_model(model, image_size=(256, 256), psf=None, oversample_n=5):
     if psf is not None:
         return convolve2d(model, psf, mode='same', boundary='symm')
     return model
-
-
-def compare_to_galaxy(arr, galaxy, psf=None, pixel_mask=None, stretch=True):
-    """Given a calculated model, compare it to the galaxy data. Return a
-    (optionally asinh-stretched) difference image.
-    A 0.8 multiplier was present in the original rendering code
-    """
-    if pixel_mask is None:
-        pixel_mask = np.ones(1)
-    if psf is None:
-        masked_model = np.nanprod((arr, pixel_mask), axis=0)
-    else:
-        masked_model = np.nanprod((
-            convolve2d(arr, psf, mode='same', boundary='symm'),
-            pixel_mask
-        ), axis=0)
-    masked_galaxy = np.nanprod((galaxy, pixel_mask), axis=0)
-    D = (0.8 * masked_galaxy) - masked_model
-    if stretch:
-        return asinh_stretch(D)
-    return D
-
-
-def post_process(arr, psf):
-    """Given a model and a psf, stretch the image to what was shown to
-    volunteers
-    """
-    return asinh_stretch(
-        convolve2d(arr, psf, mode='same', boundary='symm'),
-        0.5
-    )
 
 
 def GZB_score(D):

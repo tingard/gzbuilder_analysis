@@ -58,7 +58,7 @@ def aggregate_components(clustered_models):
             )
         }
     else:
-        aggregate_bulge = None
+        aggregate_bar = None
 
     agg_model = dict(
         disk=aggregate_disk,

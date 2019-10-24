@@ -1,4 +1,5 @@
 import cupy as cp
+from cupy import get_array_module
 from copy import deepcopy
 from scipy.signal import convolve2d
 from .sersic import oversampled_sersic_component
