@@ -5,19 +5,15 @@ try:
     from cupy import asnumpy
 except ModuleNotFoundError:
     asnumpy = np.asarray
-from copy import deepcopy
-from scipy.optimize import minimize
 from scipy.signal import convolve2d
-from tqdm import tqdm
-from gzbuilder_analysis.parsing import sanitize_model, to_pandas
+from gzbuilder_analysis.parsing import to_pandas, from_pandas, sanitize_pandas_params
+import gzbuilder_analysis.config as cfg
 try:
     import gzbuilder_analysis.rendering.cuda as rg
     from gzbuilder_analysis.rendering.cuda.spiral import spiral_distance
 except ModuleNotFoundError:
     import gzbuilder_analysis.rendering as rg
     from gzbuilder_analysis.rendering.spiral import spiral_distance
-from . import chisq
-import gzbuilder_analysis.config as cfg
 
 
 class Model():
@@ -67,38 +63,26 @@ class Model():
         return self.render(*args, **kwargs)
 
     def __getitem__(self, item):
-        try:
-            return self.params[item]
-        except KeyError:
-            return None
+        return from_pandas(self.params).get(item, None)
 
     def to_dict(self, params=None):
         if params is None:
             params = self.params
-        spirals = list(zip(
-            self.spiral_points,
-            [params[f'spiral{i}'].to_dict() for i in range(self.nspirals)]
-        ))
-        d = dict(
-            disk=params['disk'].dropna().to_dict(),
-            bulge=params['bulge'].dropna().to_dict(),
-            bar=params['bar'].dropna().to_dict(),
-            spiral=spirals
+        return from_pandas(
+            sanitize_pandas_params(params),
+            spirals=self.spiral_points
         )
-        return {k: (v if v != {} else None) for k, v in d.items()}
 
-    def render(self, model=None, params=None, force=False, oversample_n=5):
-        if model is None and params is None:
-            # render the current model
-            params = self.params
-        elif params is None:
-            # get params from the model provided
+    def render(self, params=None, model=None, force=False, oversample_n=5):
+        if params is not None:
+            pass
+        elif model is not None:
             params = to_pandas(model)
-        if force:
-            # render everything
-            components = {'disk', 'bulge', 'bar', 'spiral'}
         else:
-            # only render components that have changed
+            params = self.params
+        if force:  # render everything
+            components = {'disk', 'bulge', 'bar', 'spiral'}
+        else:  # only render components that have changed
             keep_idx = (self.params - params).where(lambda v: v != 0).dropna().index
             components = {
                 re.sub(r'[0-9]+', '', i) for i in
@@ -135,40 +119,6 @@ class Model():
             result = convolve2d(result, self.psf, mode='same', boundary='symm')
         return result
 
-
-def fit_model(model_obj, params=cfg.FIT_PARAMS, progress=True, **kwargs):
-    """Optimize a model object to minimise its chi-squared (note that this
-    mutates model_obj.params and changes the cached component arrays)
-    """
-    tuples = [(k, v) for k in params.keys() for v in params[k] if k is not 'spiral']
-    tuples += [
-        (f'spiral{i}', v)
-        for i in range(len(model_obj.spiral_distances))
-        for v in params['spiral']
-    ]
-    p0 = model_obj.params[tuples].dropna()
-    bounds = [cfg.PARAM_BOUNDS[param] for param in p0.index.levels[1][p0.index.codes[1]]]
-    def _func(p):
-        new_params = pd.Series(p, index=p0.index)
-        r = model_obj.render(params=new_params)
-        cq = chisq(r, model_obj.data, model_obj.sigma_image)
-        if np.isnan(cq):
-            return 1E5
-        return cq
-    print(f'Optimizing {len(p0)} parameters')
-    print(f'Original chisq: {_func(p0.values):.4f}')
-    print()
-    if progress:
-        with tqdm(desc='Fitting model', leave=True) as pbar:
-            pbar.set_description(f'chisq={_func(p0):.4f}')
-            def update_bar(*args):
-                pbar.update(1)
-                pbar.set_description(f'chisq={_func(args[0]):.4f}')
-            res = minimize(_func, p0, bounds=bounds, callback=update_bar, **kwargs)
-    else:
-        res = minimize(_func, p0, bounds=bounds, **kwargs)
-    print(f'Final chisq: {res["fun"]:.4f}')
-    final_params = model_obj.params.copy()
-    final_params[p0.index] = res['x']
-    tuned_model = model_obj.to_dict(params=final_params)
-    return res, tuned_model
+    def sanitize(self):
+        self.params = sanitize_pandas_params(self.params)
+        return self.params

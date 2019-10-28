@@ -64,17 +64,6 @@ SLIDER_FIT_PARAMS = {
     'spiral': ('I', 'spread', 'falloff'),
 }
 
-# SLIDER_FITTING_TEMPLATE = (
-#     ('disk', 'I'),
-#     ('bulge', 'I'),
-#     ('bulge', 'n'),
-#     ('bar', 'I'),
-#     ('bar', 'n'),
-#     ('bar', 'c'),
-#     ('spiral', 'I'),
-#     ('spiral', 'falloff'),
-#     ('spiral', 'spread'),
-# )
 
 PARAM_BOUNDS = {
     'I': (0, np.inf),
@@ -83,7 +72,7 @@ PARAM_BOUNDS = {
     'Re': (0, np.inf),
     'q': (1E-2, 1E2),
     'n': (0.1, 10),
-    'c': (1E-2, 1E1),
+    'c': (1E-1, 1E1),
     'spread': (0, np.inf),
     'falloff': (1E-2, np.inf),
     'roll': (-np.inf, np.inf)

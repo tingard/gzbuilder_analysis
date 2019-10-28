@@ -2,7 +2,8 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
 from gzbuilder_analysis.config import DEFAULT_SPIRAL
-from gzbuilder_analysis.parsing.__sanitize import sanitize_param_dict
+from gzbuilder_analysis.parsing import downsample
+from gzbuilder_analysis.parsing import sanitize_param_dict
 from .__geom_prep import ellipse_from_param_list, box_from_param_list, \
     get_param_dict, get_param_list, make_ellipse, make_box
 from .__jaccard import jaccard_distance
@@ -20,11 +21,13 @@ def aggregate_components(clustered_models):
             clustered_models['disk']
         )
         aggregate_disk = {
-            **aggregate_disk,
             **aggregate_geom_jaccard(
                 disk_cluster_geoms.values,
                 x0=get_param_list(aggregate_disk)
-            )
+            ),
+            'I': 0.2, #aggregate_disk['I'],
+            'n': 1,
+            'c': 2,
         }
     else:
         aggregate_disk = None
@@ -35,11 +38,13 @@ def aggregate_components(clustered_models):
             clustered_models['bulge']
         )
         aggregate_bulge = {
-            **aggregate_bulge,
             **aggregate_geom_jaccard(
                 bulge_cluster_geoms.values,
                 x0=get_param_list(aggregate_bulge)
-            )
+            ),
+            'I': 0.2, #aggregate_bulge['I'],
+            'n': 1, #aggregate_bulge['n'],
+            'c': 2,
         }
     else:
         aggregate_bulge = None
@@ -50,12 +55,14 @@ def aggregate_components(clustered_models):
             clustered_models['bar']
         )
         aggregate_bar = {
-            **aggregate_bar,
             **aggregate_geom_jaccard(
                 bar_cluster_geoms.values,
                 x0=get_param_list(aggregate_bar),
                 constructor_func=box_from_param_list,
-            )
+            ),
+            'I': 0.1, #aggregate_bar['I'],
+            'n': 1,#aggregate_bar['n'],
+            'c': 2,#aggregate_bar['c'],
         }
     else:
         aggregate_bar = None
@@ -67,7 +74,7 @@ def aggregate_components(clustered_models):
     )
     try:
         agg_model['spiral'] = [
-            (a.reprojected_log_spiral, DEFAULT_SPIRAL)
+            (downsample(a.reprojected_log_spiral), DEFAULT_SPIRAL)
             for a in clustered_models['spiral'].get_arms()
         ]
     except KeyError:
@@ -81,7 +88,7 @@ def aggregate_model_clusters_mean(component_clusters):
     """
     df = component_clusters.apply(pd.Series)
     mean_component = df.mean().to_dict()
-    mean_component['roll'] = np.deg2rad(np.rad2deg(df['roll']).mean())
+    mean_component['roll'] = df['roll'].mean()
     return mean_component
 
 

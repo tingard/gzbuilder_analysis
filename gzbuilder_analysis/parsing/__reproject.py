@@ -1,6 +1,5 @@
 import numpy as np
 from copy import deepcopy
-# model reprojection
 
 def __rotation_matrix(r):
 #     r = np.deg2rad(d)

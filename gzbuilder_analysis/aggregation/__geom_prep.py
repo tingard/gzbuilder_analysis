@@ -46,8 +46,7 @@ def make_box(comp):
 
 
 def get_param_list(d):
-    if d is None:
-        d = {}
+    d = d or {}
     return [
         d.get(k, DEFAULT_DISK[k])
         for k in ('mux', 'muy', 'Re', 'q', 'roll')

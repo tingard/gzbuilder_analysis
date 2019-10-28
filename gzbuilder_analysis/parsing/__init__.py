@@ -2,9 +2,12 @@ import json
 from copy import deepcopy
 import numpy as np
 import pandas as pd
-from gzbuilder_analysis.parsing.__reproject import reproject_model
+from scipy.interpolate import splprep, splev
 from shapely.affinity import scale as shapely_scale
 from shapely.affinity import translate as shapely_translate
+from .__reproject import reproject_model
+from .__sanitize import sanitize_spiral_param_dict, sanitize_param_dict, sanitize_model, sanitize_pandas_params
+from .__pandas import to_pandas, from_pandas
 
 
 def __has_drawn_component(comp):
@@ -137,39 +140,16 @@ def downsample(points, new_n=50):
     return np.array(splev(new_u, tck)).T
 
 
-def sanitize_model(model):
-    try:
-        bar_axratio = model.get('bar', {}).get('q', 1)
-        if bar_axratio > COMPONENT_CLUSTERING_PARAMS['max_bar_axratio']:
-            model['bar'] = None
-    except AttributeError:
-        pass
-    return model
-
-
-def to_pandas(model):
-    # filter out empty components
-    model = {k: v for k, v in model.items() if v is not None}
-
-    params = {
-        f'{comp} {param}': model[comp][param]
-        for comp in ('disk', 'bulge', 'bar')
-        for param in model.get(comp, {}).keys()
-    }
-    params.update({
-        f'spiral{i} {param}': model['spiral'][i][1][param]
-        for i in range(len(model['spiral']))
-        for param in model['spiral'][i][1].keys()
-    })
-    idx = pd.MultiIndex.from_tuples([
-        k.split() for k in params.keys()
-    ], names=('component', 'parameter'))
-    vals = [params.get(' '.join(p), np.nan) for p in idx.values]
-    return pd.Series(vals, index=idx, name='value')
-
-
 def make_json(model):
     return json.dumps({
         **model,
         'spiral': [(points.tolist(), params) for points, params in model['spiral']]
     })
+
+
+def unmake_json(f):
+    model = json.load(f)
+    return {
+        **model,
+        'spiral': [(np.array(points), params) for points, params in model['spiral']]
+    }
