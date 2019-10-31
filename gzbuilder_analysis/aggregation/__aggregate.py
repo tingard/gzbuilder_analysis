@@ -25,7 +25,7 @@ def aggregate_components(clustered_models):
                 disk_cluster_geoms.values,
                 x0=get_param_list(aggregate_disk)
             ),
-            'I': 0.2, #aggregate_disk['I'],
+            'I': 0.2,  # aggregate_disk['I'],
             'n': 1,
             'c': 2,
         }
@@ -42,8 +42,8 @@ def aggregate_components(clustered_models):
                 bulge_cluster_geoms.values,
                 x0=get_param_list(aggregate_bulge)
             ),
-            'I': 0.2, #aggregate_bulge['I'],
-            'n': 1, #aggregate_bulge['n'],
+            'I': 0.2,  # aggregate_bulge['I'],
+            'n': 1,  # aggregate_bulge['n'],
             'c': 2,
         }
     else:
@@ -60,9 +60,9 @@ def aggregate_components(clustered_models):
                 x0=get_param_list(aggregate_bar),
                 constructor_func=box_from_param_list,
             ),
-            'I': 0.1, #aggregate_bar['I'],
-            'n': 1,#aggregate_bar['n'],
-            'c': 2,#aggregate_bar['c'],
+            'I': 0.1,  # aggregate_bar['I'],
+            'n': 1,  # aggregate_bar['n'],
+            'c': 2,  # aggregate_bar['c'],
         }
     else:
         aggregate_bar = None
@@ -107,61 +107,3 @@ def aggregate_geom_jaccard(geoms, x0=np.array((256, 256, 5, 0.7, 0)),
             minimize(__distance_func, x0)['x']
         )
     )
-
-
-def get_aggregate_components(geoms, models, labels):
-    cluster_labels = list(map(ash.largest_cluster_label, labels))
-    cluster_masks = [a == b for a, b in zip(labels, cluster_labels)]
-    disk_cluster_geoms = geoms['disk'][cluster_masks[0]]
-    bulge_cluster_geoms = geoms['bulge'][cluster_masks[1]]
-    bar_cluster_geoms = geoms['bar'][cluster_masks[2]]
-    # calculate an aggregate disk
-    if not np.any(labels[0] == cluster_labels[0]):
-        aggregate_disk = None
-    else:
-        aggregate_disk = aggregate_comp_mean(
-            models[labels[0] == cluster_labels[0]].apply(
-                lambda v: v.get('disk', None)
-            ).dropna()
-        )
-        aggregate_disk = {
-            **aggregate_disk,
-            **aggregate_geom_jaccard(
-                disk_cluster_geoms.values,
-                x0=get_param_list(aggregate_disk)
-            )
-        }
-    # calculate an aggregate bulge
-    if not np.any(labels[1] == cluster_labels[1]):
-        aggregate_bulge = None
-    else:
-        aggregate_bulge = aggregate_comp_mean(
-            models[labels[1] == cluster_labels[1]].apply(
-                lambda v: v.get('bulge', None)
-            ).dropna()
-        )
-        aggregate_bulge = {
-            **aggregate_bulge,
-            **aggregate_geom_jaccard(
-                bulge_cluster_geoms.values,
-                x0=get_param_list(aggregate_bulge)
-            )
-        }
-    # calculate an aggregate bar
-    if not np.any(labels[2] == cluster_labels[2]):
-        aggregate_bar = None
-    else:
-        aggregate_bar = aggregate_comp_mean(
-            models[labels[2] == cluster_labels[2]].apply(
-                lambda v: v.get('bar', None)
-            ).dropna()
-        )
-        aggregate_bar = {
-            **aggregate_bar,
-            **aggregate_geom_jaccard(
-                bar_cluster_geoms.values,
-                x0=get_param_list(aggregate_bar),
-                constructor_func=box_from_param_list,
-            )
-        }
-    return aggregate_disk, aggregate_bulge, aggregate_bar

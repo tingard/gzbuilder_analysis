@@ -13,7 +13,8 @@ def chisq(model_data, galaxy_data, sigma_image, pixel_mask=None):
     if type(galaxy_data) != np.ma.core.MaskedArray:
         galaxy_data = np.ma.masked_array(galaxy_data, pixel_mask)
     return 1 / len(galaxy_data.compressed()) * np.sum(
-        ((model_data - galaxy_data) / sigma_image)**2
+        np.clip((model_data - galaxy_data) / sigma_image, -1E5, 1E5)
+        .astype(np.float64)**2
     )
 
 
@@ -28,11 +29,11 @@ def fit_model(model_obj, params=cfg.FIT_PARAMS, progress=True, **kwargs):
         for v in params['spiral']
     ]
     p0 = model_obj.params[tuples].dropna()
-    print(model_obj.params)
     if len(p0) == 0:
         print('No parameters to optimize')
         return {}, model_obj.to_dict()
     bounds = [cfg.PARAM_BOUNDS[param] for param in p0.index.levels[1][p0.index.codes[1]]]
+
     def _func(p):
         new_params = pd.Series(p, index=p0.index)
         r = model_obj.render(params=new_params)
@@ -40,12 +41,14 @@ def fit_model(model_obj, params=cfg.FIT_PARAMS, progress=True, **kwargs):
         if np.isnan(cq):
             return 1E5
         return cq
+
     print(f'Optimizing {len(p0)} parameters')
     print(f'Original chisq: {_func(p0.values):.4f}')
     print()
     if progress:
         with tqdm(desc='Fitting model', leave=True) as pbar:
             pbar.set_description(f'chisq={_func(p0):.4f}')
+
             def update_bar(*args):
                 pbar.update(1)
                 pbar.set_description(f'chisq={_func(args[0]):.4f}')

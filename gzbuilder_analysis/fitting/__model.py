@@ -1,6 +1,7 @@
 import re
 import pandas as pd
 import numpy as np
+from copy import deepcopy
 try:
     from cupy import asnumpy
 except ModuleNotFoundError:
@@ -19,6 +20,7 @@ except ModuleNotFoundError:
 class Model():
     def __init__(self, model, galaxy_data, psf=None, sigma_image=None,
                  cancel_initial_render=False):
+        self.__original_model = deepcopy(model)
         self.data = galaxy_data
         self.psf = psf
         self.sigma_image = sigma_image
@@ -119,6 +121,19 @@ class Model():
             result = convolve2d(result, self.psf, mode='same', boundary='symm')
         return result
 
-    def sanitize(self):
+    def sanitize(self, force=True):
+        _p = self.params.copy
+        r = self.render()
         self.params = sanitize_pandas_params(self.params)
+        # update the cache
+        r2 = self.render()
+        if not force and not np.allclose(r, r2):
+            print('Model changed during sanitization, aborting')
+            self.params = _p
+            self.render()
         return self.params
+
+    def reset_params(self):
+        params = to_pandas(self.__original_model)
+        self.params[params.index] = params
+        self.render(force=True)

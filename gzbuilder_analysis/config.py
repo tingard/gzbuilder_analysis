@@ -50,6 +50,7 @@ ALL_PARAMS = {
     'bar':    ('mux', 'muy', 'roll', 'Re', 'q', 'I', 'n', 'c'),
     'spiral': ('I', 'spread', 'falloff'),
 }
+
 FIT_PARAMS = {
     'disk':   ('I', 'Re', 'q'),
     'bulge':  ('I', 'Re', 'q', 'n'),
@@ -71,7 +72,7 @@ PARAM_BOUNDS = {
     'muy': (-np.inf, np.inf),
     'Re': (0, np.inf),
     'q': (1E-2, 1E2),
-    'n': (0.1, 10),
+    'n': (2E-1, 10),
     'c': (1E-1, 1E1),
     'spread': (0, np.inf),
     'falloff': (1E-2, np.inf),
