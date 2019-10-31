@@ -1,13 +1,7 @@
 import numpy as np
-try:
-    from cupy import get_array_module
-except ModuleNotFoundError:
-    def get_array_module(*args, **kwargs):
-        return np
 
 
-def oversampled_function(func):
-    _p = get_array_module(func(0, 0))
+def oversampled_function(func, _p=np):
     def _new_func(*args, shape=(256, 256), oversample_n=5, **kwargs):
         n = oversample_n
         x = _p.linspace(0.5 / n - 0.5, shape[1] - 0.5 - 0.5 / n, shape[1] * n)

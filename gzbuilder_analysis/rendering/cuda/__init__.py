@@ -1,16 +1,15 @@
 import cupy as cp
-from cupy import get_array_module
-from copy import deepcopy
 from scipy.signal import convolve2d
 from .sersic import oversampled_sersic_component
 from .spiral import spiral_arm
+
 
 # image manipulation
 def asinh(arr):
     """Inverse hyperbolic sine function
     """
-    _p = cp.get_array_module(px)
-    return _p.log(px + _p.sqrt(1.0 + (px * px)))
+    _p = cp.get_array_module(arr)
+    return _p.log(arr + _p.sqrt(1.0 + (arr * arr)))
 
 
 def asinh_stretch(px, a=0.6):
