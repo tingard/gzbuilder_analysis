@@ -96,26 +96,30 @@ class Model():
             components |= {'spiral'}
         # update the cached params
         self.params[params.index] = params
+        cleaned_params = self.params.dropna()
         for k in components:
             if 'spiral' not in k:
                 try:
                     self._cache[k] = rg.oversampled_sersic_component(
-                        self.params.dropna()[k].to_dict(),
+                        cleaned_params[k].to_dict(),
                         image_size=self.data.shape,
                         oversample_n=oversample_n,
                     )
                 except KeyError:
                     self._cache[k] = 0
             else:
-                self._cache['spiral'] = sum([
-                    rg.spiral_arm(
-                        distances=self.spiral_distances[i],
-                        params=self.params[f'spiral{i}'].to_dict(),
-                        disk=self.params['disk'].to_dict(),
-                        image_size=self.data.shape,
-                    )
-                    for i in range(len(self.spiral_distances))
-                ])
+                try:
+                    self._cache['spiral'] = sum([
+                        rg.spiral_arm(
+                            distances=self.spiral_distances[i],
+                            params=self.params[f'spiral{i}'].to_dict(),
+                            disk=cleaned_params['disk'].to_dict(),
+                            image_size=self.data.shape,
+                        )
+                        for i in range(len(self.spiral_distances))
+                    ])
+                except KeyError:
+                    self._cache['spiral'] = 0
         result = np.zeros(self.data.shape) + asnumpy(sum(self._cache.values))
         if self.psf is not None:
             result = convolve2d(result, self.psf, mode='same', boundary='symm')

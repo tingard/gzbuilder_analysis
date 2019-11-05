@@ -2,11 +2,13 @@ import numpy as np
 from numba import jit
 from .__oversample import oversampled_function
 
+
 @jit(nopython=True)
 def roll_coordinates(x, y, mux, muy, roll):
     xp = x * np.cos(roll) + y * np.sin(roll) + mux - mux * np.cos(roll) - muy * np.sin(roll)
     yp = - x * np.sin(roll) + y * np.cos(roll) + muy + mux * np.sin(roll) - muy * np.cos(roll)
     return xp, yp
+
 
 @jit(nopython=True)
 def boxy_radius(xp, yp, mux, muy, q, c):
@@ -36,6 +38,8 @@ def sersic2d(x=0, y=0, mux=0, muy=0, roll=0, Re=1, q=1, c=2, I=1, n=1):
 
 
 __oversampled_sersic = oversampled_function(sersic2d)
+
+
 def oversampled_sersic_component(comp, image_size=(256, 256), oversample_n=5, **kwargs):
     if comp is None:
         return np.zeros(image_size)

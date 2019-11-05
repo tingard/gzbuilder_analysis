@@ -28,8 +28,8 @@ def spiral_distance(poly_line, distances=np.zeros((100, 100))):
     return np.sqrt(distances)
 
 
-def spiral_arm(arm_points=None, distances=None, params=DEFAULT_SPIRAL, disk=DEFAULT_DISK,
-               image_size=(256, 256)):
+def spiral_arm(arm_points=None, distances=None, params=DEFAULT_SPIRAL,
+               disk=DEFAULT_DISK, image_size=(256, 256)):
     if arm_points is None and distances is None:
         raise TypeError(
             'Must provide either an (N,2) array of points,'

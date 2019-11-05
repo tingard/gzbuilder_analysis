@@ -1,7 +1,7 @@
 import numpy as np
 from copy import deepcopy
-from gzbuilder_analysis.config import PARAM_BOUNDS
-from .__pandas import to_pandas
+from gzbuilder_analysis.config import PARAM_BOUNDS, COMPONENT_CLUSTERING_PARAMS
+
 
 def sanitize_model(m):
     """Ensure model component  paramaters are physical
