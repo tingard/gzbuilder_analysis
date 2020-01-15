@@ -16,7 +16,7 @@ from gzbuilder_analysis.aggregation.spirals.oo import Pipeline
 
 
 def cluster_components(models=None, classifications=None, image_size=(512, 512),
-                       phi=None, ba=None):
+                       phi=None, ba=None, params=COMPONENT_CLUSTERING_PARAMS):
     """Accepts a list of models (or classifications) and returns clusters of
     disks, bulges, bars and spiral arms
     """
@@ -42,8 +42,8 @@ def cluster_components(models=None, classifications=None, image_size=(512, 512),
     clusters = {
         k: components[k].loc[cluster_geoms(
             geoms[k],
-            COMPONENT_CLUSTERING_PARAMS[k]['eps'],
-            COMPONENT_CLUSTERING_PARAMS[k]['min_samples'],
+            params[k]['eps'],
+            params[k]['min_samples'],
         ).index]
         for k in ('disk', 'bulge', 'bar')
     }
@@ -53,14 +53,14 @@ def cluster_components(models=None, classifications=None, image_size=(512, 512),
             'Please re-run spiral clustering with the position and ellipticity',
             'obtained from aggregation of disk'
             )
-        phi = clusters['disk'].apply(lambda m: m['roll'].mean())
-    else:
-        drawn_arms = get_drawn_arms(models, min_n=5)
-        clusters['spiral'] = Pipeline(
-            drawn_arms.values,
-            phi=phi, ba=ba,
-            image_size=image_size[0]
-        )
+        return clusters
+    drawn_arms = get_drawn_arms(models, min_n=5)
+
+    clusters['spiral'] = Pipeline(
+        drawn_arms.values,
+        phi=phi, ba=ba,
+        image_size=image_size[0]
+    )
     return clusters
 
 

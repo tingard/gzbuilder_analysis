@@ -11,7 +11,7 @@ def sanitize_model(m):
         **{
             k: sanitize_param_dict(v)
             for k, v in m.items()
-            if k is not 'spiral'
+            if k != 'spiral'
         }
     })
 

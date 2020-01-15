@@ -15,7 +15,8 @@ from gzbuilder_analysis.aggregation.spirals import get_pitch_angle, get_sample_w
 
 
 class Arm():
-    def __init__(self, parent_pipeline, arms, clean_points=True):
+    def __init__(self, parent_pipeline, arms, clean_points=True,
+                 weight_points=True):
         self.__parent_pipeline = parent_pipeline
         self.arms = np.array(equalize_arm_length(arms))
         self.phi = parent_pipeline.phi
@@ -46,7 +47,10 @@ class Arm():
         self.groups = self.groups_all[self.outlier_mask]
         self.R = self.R_all[self.outlier_mask]
         self.t = self.t_all_unwrapped[self.outlier_mask]
-        self.point_weights = get_sample_weight(self.R, self.groups, bar_length)
+        if weight_points:
+            self.point_weights = get_sample_weight(self.R, self.groups, bar_length)
+        else:
+            self.point_weights = np.ones_like(self.R)
         self.logsp_model.fit(self.t.reshape(-1, 1), self.R,
                              bayesianridge__sample_weight=self.point_weights)
         if self.logsp_model.score(self.t.reshape(-1, 1), self.R,) < 0.2:
@@ -237,9 +241,9 @@ class Pipeline():
             algorithm='brute',
         ).fit(self.distances)
 
-    def get_arm(self, arm_label, clean_points=True):
+    def get_arm(self, arm_label, clean_points=True, weight_points=True):
         arms_in_cluster = self.drawn_arms[self.db.labels_ == arm_label]
-        return Arm(self, arms_in_cluster, clean_points=clean_points)
+        return Arm(self, arms_in_cluster, clean_points=clean_points, weight_points=weight_points)
 
     def filter_arms(self, arms):
         return [arm for arm in arms if not arm.FLAGGED_AS_BAD]

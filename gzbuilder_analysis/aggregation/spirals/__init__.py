@@ -85,6 +85,8 @@ def weight_r_by_n_arms(R, groups):
 
 def get_sample_weight(R, groups, bar_length=0):
     w = np.ones(R.shape[0])
+    # We increase the weights of arms where we have multiple overlapping drawn poly-lines,
+    # and also with radius (to represent the decreasing uncertainty in theta)
     w *= R**2
     w *= weight_r_by_n_arms(R, groups)(R)
     w[R < bar_length] = 0
