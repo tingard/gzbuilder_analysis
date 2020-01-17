@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 from .__model import Model
+from .__nnlf import negative_log_likelihood
 import gzbuilder_analysis.config as cfg
 from scipy.optimize import minimize
 from tqdm import tqdm

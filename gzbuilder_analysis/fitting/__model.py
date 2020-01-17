@@ -8,6 +8,7 @@ except ModuleNotFoundError:
     asnumpy = np.asarray
 from scipy.signal import convolve2d
 from gzbuilder_analysis.parsing import to_pandas, from_pandas, sanitize_pandas_params
+from .__nnlf import negative_log_likelihood
 import gzbuilder_analysis.config as cfg
 try:
     import gzbuilder_analysis.rendering.cuda as rg
@@ -19,8 +20,9 @@ except ModuleNotFoundError:
 
 class Model():
     def __init__(self, model, galaxy_data, psf=None, sigma_image=None,
-                 cancel_initial_render=False):
+                 cancel_initial_render=False, param_sigma=None):
         self.__original_model = deepcopy(model)
+        self.__original_params = to_pandas(self.__original_model)
         self.data = galaxy_data
         self.psf = psf
         self.sigma_image = sigma_image
@@ -29,6 +31,7 @@ class Model():
         # populate self.params with the provided model
         params = to_pandas(model)
         self.params[params.index] = params
+        self.param_sigma = param_sigma
         self.spiral_points = np.array([points for points, params in model['spiral']])
         if len(model['spiral']) > 0:
             self.spiral_distances = [
@@ -124,6 +127,13 @@ class Model():
         if self.psf is not None:
             result = convolve2d(result, self.psf, mode='same', boundary='symm')
         return result
+
+    def nnlf(self, params):
+        render = self.render(params)
+        return negative_log_likelihood(
+            render, self.data, self.sigma_image,
+            params, self.__original_params, self.param_sigma,
+        )
 
     def sanitize(self, force=True):
         _p = self.params.copy
