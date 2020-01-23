@@ -16,7 +16,8 @@ from gzbuilder_analysis.aggregation.spirals.oo import Pipeline
 
 
 def cluster_components(models=None, classifications=None, image_size=(512, 512),
-                       phi=None, ba=None, params=COMPONENT_CLUSTERING_PARAMS):
+                       phi=None, ba=None, params=COMPONENT_CLUSTERING_PARAMS,
+                       warn=True):
     """Accepts a list of models (or classifications) and returns clusters of
     disks, bulges, bars and spiral arms
     """
@@ -48,18 +49,19 @@ def cluster_components(models=None, classifications=None, image_size=(512, 512),
         for k in ('disk', 'bulge', 'bar')
     }
     if phi is None or ba is None:
-        print('No spiral inclination and position angle provided, ignoring spirals.')
-        print(
-            'Please re-run spiral clustering with the position and ellipticity',
-            'obtained from aggregation of disk'
-            )
+        if warn:
+            print('No spiral inclination and position angle provided, ignoring spirals.')
+            print(
+                'Please re-run spiral clustering with the position and ellipticity',
+                'obtained from aggregation of disk'
+                )
         return clusters
     drawn_arms = get_drawn_arms(models, min_n=5)
 
     clusters['spiral'] = Pipeline(
         drawn_arms.values,
         phi=phi, ba=ba,
-        image_size=image_size[0]
+        image_size=image_size
     )
     return clusters
 

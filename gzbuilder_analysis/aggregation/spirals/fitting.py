@@ -6,8 +6,7 @@ from sklearn.preprocessing import PolynomialFeatures
 from sklearn.compose import TransformedTargetRegressor
 from sklearn.pipeline import Pipeline, make_pipeline
 from sklearn.metrics import median_absolute_error
-from gzbuilder_analysis.aggregation.spirals import r_theta_from_xy, xy_from_r_theta, metric
-
+from gzbuilder_analysis.aggregation.spirals import metric
 from gzbuilder_analysis.config import SPIRAL_BAYESIAN_RIDGE_PRIORS
 # obtained by fitting a semi-truncated Gamma distribution to spiral arm width
 # slider values, after removing all values at 1 (default) and 0 and 2

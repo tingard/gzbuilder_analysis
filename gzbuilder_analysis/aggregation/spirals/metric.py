@@ -70,7 +70,7 @@ def arc_distance_fast(a, b):
     )
 
 
-# Alternatively, use the low-level library Shapely to calculate our distances for us!
+# Alternatively, use the library Shapely to calculate our distances for us!
 def spiral_distance_shapely(arm0, arm1):
     m = MultiPoint(arm0)
     line = LineString(arm1)
@@ -86,11 +86,13 @@ def arc_distance_shapely(a, b):
         spiral_distance_shapely(a, b) + spiral_distance_shapely(b, a)
     )
 
+
 def min_arc_distance_shapely(a, b):
     return min(
         spiral_distance_shapely(a, b),
         spiral_distance_shapely(b, a)
     )
+
 
 def calculate_distance_matrix(cls):
     distances = np.zeros((len(cls), len(cls)))

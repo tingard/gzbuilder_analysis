@@ -6,29 +6,43 @@ from sklearn.cluster import DBSCAN
 from sklearn.metrics import median_absolute_error
 from sklearn.model_selection import GroupKFold
 from gzbuilder_analysis.config import ARM_CLUSTERING_PARAMS
-from gzbuilder_analysis.aggregation.spirals import equalize_arm_length
-from gzbuilder_analysis.aggregation.spirals import split_arms_at_center
-from gzbuilder_analysis.aggregation.spirals import xy_from_r_theta, r_theta_from_xy
-from gzbuilder_analysis.aggregation.spirals import metric, cleaning
-from gzbuilder_analysis.aggregation.spirals import deprojecting, fitting
-from gzbuilder_analysis.aggregation.spirals import get_pitch_angle, get_sample_weight
+from gzbuilder_analysis.aggregation.spirals import \
+    metric, cleaning, deprojecting, fitting, \
+    equalize_arm_length, split_arms_at_center, \
+    xy_from_r_theta, r_theta_from_xy, \
+    get_pitch_angle, get_sample_weight
 
 
 class Arm():
     def __init__(self, parent_pipeline, arms, clean_points=True,
-                 weight_points=True):
+                 weight_points=True, x_centre=None, y_centre=None):
         self.__parent_pipeline = parent_pipeline
         self.arms = np.array(equalize_arm_length(arms))
         self.phi = parent_pipeline.phi
         self.ba = parent_pipeline.ba
+        self.should_weight_points = weight_points
         self.image_size = parent_pipeline.image_size
+        self.x_centre = self.image_size / 2 if x_centre is None else x_centre
+        self.y_centre = self.image_size / 2 if y_centre is None else y_centre
         self.FLAGGED_AS_BAD = False
 
-        bar_length = parent_pipeline.bar_length / self.image_size
-
+        self.bar_length = parent_pipeline.bar_length / self.image_size
         self.logsp_model = fitting.get_log_spiral_pipeline()
 
         self.coords, self.groups_all = cleaning.get_grouped_data(arms)
+        if clean_points:
+            self.outlier_mask = cleaning.clean_arms_xy(
+                self.coords,
+                self.groups_all,
+            )
+        else:
+            self.outlier_mask = np.ones(len(self.coords), dtype=bool)
+        self.did_clean = clean_points
+        self.__get_deprojected_coordinates()
+        self.__get_point_weights()
+        self.__fit_logsp()
+
+    def __get_deprojected_coordinates(self):
         self.deprojected_coords = deprojecting.deproject_arm(
             self.coords / self.image_size - 0.5,
             angle=self.phi, ba=self.ba,
@@ -36,46 +50,45 @@ class Arm():
         self.R_all, self.t_all = r_theta_from_xy(*self.deprojected_coords.T)
         self.t_all_unwrapped = fitting.unwrap(self.t_all, self.R_all,
                                               self.groups_all)
-        if clean_points:
-            self.outlier_mask = cleaning.clean_arms_xy(
-                self.coords,
-                self.groups_all,
-            )
-        else:
-            self.outlier_mask = np.ones(self.R_all.shape[0], dtype=bool)
-        self.did_clean = clean_points
+        # only apply masking after unwrapping
         self.groups = self.groups_all[self.outlier_mask]
         self.R = self.R_all[self.outlier_mask]
         self.t = self.t_all_unwrapped[self.outlier_mask]
-        if weight_points:
-            self.point_weights = get_sample_weight(self.R, self.groups, bar_length)
+
+    def __get_point_weights(self):
+        if self.should_weight_points:
+            self.point_weights = get_sample_weight(
+                self.R, self.groups, self.bar_length
+            )
         else:
             self.point_weights = np.ones_like(self.R)
+
+    def __fit_logsp(self):
+        self.t_predict = np.linspace(min(self.t), max(self.t), 500)
         self.logsp_model.fit(self.t.reshape(-1, 1), self.R,
                              bayesianridge__sample_weight=self.point_weights)
         if self.logsp_model.score(self.t.reshape(-1, 1), self.R,) < 0.2:
             self.FLAGGED_AS_BAD = True
 
-        self.t_predict = np.linspace(min(self.t), max(self.t), 500)
         R_predict = self.logsp_model.predict(self.t_predict.reshape(-1, 1))
-        t_predict = self.t_predict[R_predict > bar_length]
-        R_predict = R_predict[R_predict > bar_length]
-
+        bar_mask = R_predict > self.bar_length
+        t_predict = self.t_predict[bar_mask]
+        R_predict = R_predict[bar_mask]
         self.polar_logsp = np.array((t_predict, R_predict))
 
         x, y = xy_from_r_theta(R_predict, t_predict)
-
-        self.length = np.sqrt(
-            np.diff(x)**2 + np.diff(y)**2
-        ).sum() * self.image_size
-
         self.log_spiral = (np.stack((x, y), axis=1) + 0.5) * self.image_size
-
         self.reprojected_log_spiral = (deprojecting.reproject_arm(
             arm=np.stack((x, y), axis=1),
             angle=self.phi,
             ba=self.ba
         ) + 0.5) * self.image_size
+        self.length = np.sqrt(
+            np.add.reduce(
+                np.diff(self.reprojected_log_spiral, axis=0)**2,
+                axis=1
+            ),
+        ).sum()
         br = self.logsp_model.named_steps['bayesianridge'].regressor_
         self.coef = br.coef_
         self.sigma = br.sigma_
@@ -83,6 +96,25 @@ class Arm():
             self.coef[0],
             self.sigma[0, 0]
         )
+
+    def to_new_projection(self, phi, ba):
+        self.phi = phi
+        self.ba = ba
+        self.__get_deprojected_coordinates()
+        self.__get_point_weights()
+        self.__fit_logsp()
+        return self.reprojected_log_spiral
+
+    def recenter(self, x_centre, y_centre):
+        dx = x_centre - self.x_centre
+        dy = y_centre - self.y_centre
+        self.x_centre = x_centre
+        self.y_centre = y_centre
+        self.arms -= [dx, dy]
+        self.coords -= [dx, dy]
+        self.__get_deprojected_coordinates()
+        self.__get_point_weights()
+        self.__fit_logsp()
 
     def get_error(self):
         foo = []
