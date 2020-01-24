@@ -37,7 +37,7 @@ class Arm():
 
     def __get_deprojected_coordinates(self):
         self.deprojected_coords = deprojecting.deproject_arm(
-            (self.coords - self.centre_pos) / self.image_size,
+            (self.coords - self.centre_pos) / self.image_size[0],
             angle=self.phi, ba=self.ba,
         )
         self.R_all, self.t_all = utils.r_theta_from_xy(
@@ -72,12 +72,12 @@ class Arm():
         self.polar_logsp = np.array((t_predict, R_predict))
 
         x, y = utils.xy_from_r_theta(R_predict, t_predict)
-        self.log_spiral = np.stack((x, y), axis=1) * self.image_size + self.centre_pos
+        self.log_spiral = np.stack((x, y), axis=1) * self.image_size[0] + self.centre_pos
         self.reprojected_log_spiral = deprojecting.reproject_arm(
             arm=np.stack((x, y), axis=1),
             angle=self.phi,
             ba=self.ba
-        ) * self.image_size + self.centre_pos
+        ) * self.image_size[0] + self.centre_pos
         self.length = np.sqrt(
             np.sum(
                 np.diff(self.reprojected_log_spiral, axis=0)**2,
@@ -87,9 +87,10 @@ class Arm():
         br = self.logsp_model.named_steps['bayesianridge'].regressor_
         self.coef = br.coef_
         self.sigma = br.sigma_
+        self.A = np.exp(self.coef[0]) * self.image_size[0]
         self.pa, self.sigma_pa, self.chirality = utils.get_pitch_angle(
-            self.coef[0],
-            self.sigma[0, 0]
+            self.coef[1],
+            self.sigma[1, 1]
         )
 
     def modify_disk(self, centre=None, phi=None, ba=None):

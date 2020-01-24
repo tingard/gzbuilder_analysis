@@ -42,7 +42,7 @@ def aggregate_components(clustered_models):
                 bulge_cluster_geoms.values,
                 x0=get_param_list(aggregate_bulge)
             ),
-            'I': 0.2,  # aggregate_bulge['I'],
+            'I': 0.01,  # aggregate_bulge['I'],
             'n': 1,  # aggregate_bulge['n'],
             'c': 2,
         }
@@ -60,8 +60,8 @@ def aggregate_components(clustered_models):
                 x0=get_param_list(aggregate_bar),
                 constructor_func=box_from_param_list,
             ),
-            'I': 0.1,  # aggregate_bar['I'],
-            'n': 1,  # aggregate_bar['n'],
+            'I': 0.01,  # aggregate_bar['I'],
+            'n': 1.0,  # aggregate_bar['n'],
             'c': 2,  # aggregate_bar['c'],
         }
     else:

@@ -30,11 +30,11 @@ SPIRAL_BAYESIAN_RIDGE_PRIORS = {
 
 # DBSCAN parameters for spiral arm clustering
 ARM_CLUSTERING_PARAMS = {
-    'eps': 3E-3,
+    'eps': 1E-3,
     'min_samples': 4,
 }
 
-SPIRAL_MERGING_THRESHOLD = 1E-3
+SPIRAL_MERGING_THRESHOLD = 5E-4
 
 
 # DBSCAN parameters for spiral arm clustering

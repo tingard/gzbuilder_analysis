@@ -66,14 +66,14 @@ def get_log_spiral_pipeline():
     steps = [
         PolynomialFeatures(
             degree=1,
-            include_bias=False,
+            include_bias=True,
         ),
         TransformedTargetRegressor(
             regressor=BayesianRidge(
                 compute_score=True,
-                fit_intercept=True,
+                fit_intercept=False,
                 copy_X=True,
-                normalize=True,
+                normalize=False,
                 **SPIRAL_BAYESIAN_RIDGE_PRIORS
             ),
             func=np.log,
@@ -96,7 +96,7 @@ def get_polynomial_pipeline(degree):
             compute_score=True,
             fit_intercept=True,
             copy_X=True,
-            normalize=True,
+            normalize=False,
             **SPIRAL_BAYESIAN_RIDGE_PRIORS
         )
     )

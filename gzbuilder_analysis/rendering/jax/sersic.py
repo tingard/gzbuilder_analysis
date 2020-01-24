@@ -39,16 +39,6 @@ def sersic(x, y, mux=0, muy=0, roll=0, q=1, c=2, Ie=1, Re=1, n=1):
 
 
 @jit
-def psf_conv(arr, psf):
-    return conv(
-        arr.reshape(1, 1, *arr.shape),
-        psf.reshape(1, 1, *psf.shape),
-        (1, 1),
-        'SAME'
-    )[0, 0]
-
-
-@jit
 def sersic_ltot(I, Re, n):
     return (
         2 * np.pi * I * Re**2 * n

@@ -26,9 +26,9 @@ def deproject_arm(arm, angle=0, ba=1):
     (in degrees), rotate the points about the origin and scale outwards along
     the y axis
     """
-    a = -np.deg2rad(angle)
+    # a = -np.deg2rad(angle)
     rotation_matrix = np.array(
-        ((np.cos(a), np.sin(a)), (-np.sin(a), np.cos(a)))
+        ((np.cos(angle), np.sin(angle)), (-np.sin(angle), np.cos(angle)))
     )
     rotated_arm = np.dot(rotation_matrix, arm.T)
     stretched_arm = rotated_arm.T * (1/ba, 1)
