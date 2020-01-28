@@ -2,6 +2,7 @@ import pandas as pd
 import jax.numpy as np
 from jax import jit, ops
 from jax.lax import conv
+from functools import reduce
 from .sersic import sersic, sersic_ltot, sersic_I
 from .spiral import vmap_polyline_distance
 
@@ -94,7 +95,6 @@ def get_reparametrized_erros(agg_res):
         dtype=np.float64
     )
     errs['disk'] = disk_e.copy()
-    errs['disk'] *= 3
     errs.loc['L', 'disk'] = np.inf
     errs.loc['I', 'disk'] = np.nan
     errs.loc['n', 'disk'] = np.nan
@@ -130,10 +130,47 @@ def get_reparametrized_erros(agg_res):
     return comp_bool_indexing(errs)
 
 
-# TODO: limits
-# def get_limits(agg_res, keys):
-#     m = to_reparametrization(agg_res, output_pandas=True)
-#     # m.loc
+def get_limits(agg_res):
+    n_spirals = len(agg_res.spiral_arms)
+    return {
+        'disk': {
+            'L': [0.0, np.inf],
+            'mux': [-np.inf, np.inf],
+            'muy': [-np.inf, np.inf],
+            'q': [0.3, 1.2],
+            'roll': [-np.inf, np.inf],
+            'Re': [0.01, np.inf],
+        },
+        'bulge': {
+            'c': [],
+            'frac': [0.0, 0.99],
+            'mux': [-np.inf, np.inf],
+            'muy': [-np.inf, np.inf],
+            'n': [0.5, 5],
+            'q': [0.6, 1.2],
+            'roll': [-np.inf, np.inf],
+            'scale': [0.05, 1],
+        },
+        'bar': {
+            'c': [1, 6],
+            'frac': [0.0, 0.99],
+            'mux': [-np.inf, np.inf],
+            'muy': [-np.inf, np.inf],
+            'n': [0.3, 5],
+            'q': [0.05, 0.6],
+            'roll': [-np.inf, np.inf],
+            'scale': [0.05, 1],
+        },
+        'spiral': reduce(lambda a, b: {**a, **b}, ({
+            f'I.{i}': [0, np.inf],
+            f'A.{i}': [0, np.inf],
+            f'falloff.{i}': [0.001, np.inf],
+            f'phi.{i}': [-85.0, 85.0],
+            f'spread.{i}': [0.05, np.inf],
+            f't_min.{i}': [-np.inf, np.inf],
+            f't_max.{i}': [-np.inf, np.inf],
+        } for i in range(n_spirals))) if n_spirals > 0 else {}
+    }
 
 
 def _logsp(t_min, t_max, A, phi, q, roll, mux, muy, N):

@@ -23,13 +23,17 @@ class AggregationResult(object):
             self.aggregation_result['disk']['muy']
         ))
         drawn_arms = get_drawn_arms(models, min_n=5)
-        self.spiral_pipeline = Pipeline(
-            drawn_arms.values,
-            centre_pos=self.centre_pos,
-            phi=self.phi, ba=self.ba,
-            image_size=galaxy_data.shape
-        )
-        self.spiral_arms = self.spiral_pipeline.get_arms()
+        if len(drawn_arms) > 0:
+            self.spiral_pipeline = Pipeline(
+                drawn_arms.values,
+                centre_pos=self.centre_pos,
+                phi=self.phi, ba=self.ba,
+                image_size=galaxy_data.shape
+            )
+            self.spiral_arms = self.spiral_pipeline.get_arms()
+        else:
+            self.spiral_pipeline = None
+            self.spiral_arms = []
         self.__model = aggregate_components(self.clusters)
         self.__model['spiral'] = [
             (downsample(a.reprojected_log_spiral), DEFAULT_SPIRAL)
