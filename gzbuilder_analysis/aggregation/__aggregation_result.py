@@ -8,6 +8,7 @@ from .__cluster import cluster_components
 from .__aggregate import aggregate_components
 
 
+# probably doesn't need to be a class, given it has no methods.
 class AggregationResult(object):
     def __init__(self, models, galaxy_data):
         self.clusters = cluster_components(
@@ -15,6 +16,7 @@ class AggregationResult(object):
             image_size=galaxy_data.shape,
             warn=False
         )
+        self.input_models = models
         self.aggregation_result = aggregate_components(self.clusters)
         self.phi = self.aggregation_result['disk']['roll']
         self.ba = self.aggregation_result['disk']['q']
@@ -34,8 +36,8 @@ class AggregationResult(object):
         else:
             self.spiral_pipeline = None
             self.spiral_arms = []
-        self.__model = aggregate_components(self.clusters)
-        self.__model['spiral'] = [
+        self.model = aggregate_components(self.clusters)
+        self.model['spiral'] = [
             (downsample(a.reprojected_log_spiral), DEFAULT_SPIRAL)
             for a in self.spiral_arms
         ]
@@ -49,24 +51,4 @@ class AggregationResult(object):
             self.errors.xs('c', level=1, drop_level=False),
         ))
         self.errors[unconstrained_errs.index] = np.inf
-        self.params = to_pandas(self.__model).rename('model')
-
-    def reset_params(self):
-        self.params = to_pandas(self.__model).rename('model')
-
-    def __calculate_spirals(self):
-        kw = dict(
-            centre=self.params[[('disk', 'mux'), ('disk', 'muy')]],
-            phi=self.params[('disk', 'roll')],
-            ba=self.params[('disk', 'q')]
-        )
-        [arm.modify_disk(**kw) for arm in self.spiral_arms]
-
-    # used during fitting
-    def update_params(self, new_params):
-        delta = (self.params - new_params).dropna()
-        self.params.update(new_params)
-        if np.any(delta.xs('disk', level=0) == 0):
-            self.__calculate_spirals()
-            return True
-        return False
+        self.params = to_pandas(self.model).rename('model')

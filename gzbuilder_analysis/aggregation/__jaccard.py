@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 
+
 def jaccard_distance(ob1, ob2):
     if ob1.union(ob2).area <= 0:
         return 1

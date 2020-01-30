@@ -26,6 +26,7 @@ def parse_sersic_comp(comp, image_size, ignore_scale=False, **kwargs):
         'muy': image_size[0] - drawing['y'],
         'roll': np.deg2rad(roll),
         # in the original rendering code, minor axis was used instead of major
+        # and a scaling of 3 was present
         'Re': max(
             1e-5,
             minor_axis * (
@@ -38,7 +39,7 @@ def parse_sersic_comp(comp, image_size, ignore_scale=False, **kwargs):
             float(comp['value'][2]['value'])
             if comp['value'][2]['value'] is not None
             else 0.2
-        ) / (2 * 0.8), # correct for a factor of 2 and a 1/0.8 multiplier to standardise
+        ) / (2 * 0.8),  # correct for a factor of 2 and a 1/0.8 multiplier to standardise
         'c': 2,
         'n': 1,
     }
@@ -130,6 +131,35 @@ def scale_model(model, scale):
             for points, params in model['spiral']
         ]
     return model_out
+
+
+def rotate_model_about_centre(model, image_size, rotation):
+    crpos = np.array(image_size) / 2
+    rot_mx = np.array((
+        (np.cos(rotation), np.sin(rotation)),
+        (-np.sin(rotation), np.cos(rotation))
+    ))
+    new_model = {}
+    for comp in model:
+        if model[comp] is None:
+            new_model[comp] = None
+        elif comp == 'spiral':
+            new_spirals = [
+                ((np.dot(rot_mx, (points - crpos).T).T + crpos), deepcopy(params))
+                for points, params in model[comp]
+            ]
+            new_model[comp] = new_spirals
+        else:
+            new_model[comp] = deepcopy(model[comp])
+            p = np.array((new_model[comp]['mux'], new_model[comp]['muy']))
+            new_p = np.dot(rot_mx, p - crpos) + crpos
+            new_model[comp]['mux'] = new_p[0]
+            new_model[comp]['muy'] = new_p[1]
+            new_model[comp]['roll'] = (
+                new_model[comp]['roll'] + rotation
+            ) % np.pi
+            # Mod Pi not 2Pi due to rotational symmetry
+    return new_model
 
 
 def downsample(points, new_n=50):

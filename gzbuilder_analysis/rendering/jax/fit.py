@@ -6,6 +6,13 @@ from functools import reduce
 from .sersic import sersic, sersic_ltot, sersic_I
 from .spiral import vmap_polyline_distance
 
+EMPTY_SERSIC = pd.Series(
+    dict(mux=0, muy=0, Re=0.5, roll=0, q=1, I=0, n=1, c=2)
+)
+EMPTY_SERSIC_ERR = pd.Series(
+    dict(mux=1E-1, muy=1E-1, Re=0.1, roll=0.01, q=0.01, I=0.01, n=0.01, c=0.01)
+)
+
 
 def comp_bool_indexing(df):
     """Quickly convert a DataFrame to a dictionary, removing any NaNs
@@ -33,8 +40,15 @@ def to_reparametrization(agg_res, output_pandas=False):
     """Accept an aggregation result and reparametrize the result
     """
     disk = agg_res.params['disk']
-    bulge = agg_res.params['bulge']
-    bar = agg_res.params['bar']
+    if 'bulge' in agg_res.params:
+        bulge = agg_res.params['bulge']
+    else:
+        bulge = EMPTY_SERSIC
+    if 'bar' in agg_res.params:
+        bar = agg_res.params['bar']
+    else:
+        bar = EMPTY_SERSIC
+
     spirals = pd.DataFrame([
         agg_res.params[f'spiral{i}']
         for i in range(len(agg_res.spiral_arms))
@@ -82,12 +96,24 @@ def to_reparametrization(agg_res, output_pandas=False):
 
 def get_reparametrized_erros(agg_res):
     disk = agg_res.params['disk']
-    bulge = agg_res.params['bulge']
-    bar = agg_res.params['bar']
+    if 'bulge' in agg_res.params:
+        bulge = agg_res.params['bulge']
+    else:
+        bulge = EMPTY_SERSIC
+    if 'bar' in agg_res.params:
+        bar = agg_res.params['bar']
+    else:
+        bar = EMPTY_SERSIC
 
     disk_e = agg_res.errors['disk']
-    bulge_e = agg_res.errors['bulge']
-    bar_e = agg_res.errors['bar']
+    if 'bulge' in agg_res.errors:
+        bulge_e = agg_res.errors['bulge']
+    else:
+        bulge_e = EMPTY_SERSIC
+    if 'bar' in agg_res.errors:
+        bar_e = agg_res.errors['bar']
+    else:
+        bar_e = EMPTY_SERSIC
 
     errs = pd.DataFrame(
         [],
@@ -137,12 +163,11 @@ def get_limits(agg_res):
             'L': [0.0, np.inf],
             'mux': [-np.inf, np.inf],
             'muy': [-np.inf, np.inf],
-            'q': [0.3, 1.2],
+            'q': [0.4, 1.2],
             'roll': [-np.inf, np.inf],
             'Re': [0.01, np.inf],
         },
         'bulge': {
-            'c': [],
             'frac': [0.0, 0.99],
             'mux': [-np.inf, np.inf],
             'muy': [-np.inf, np.inf],
@@ -329,16 +354,14 @@ def _step(p, keys, n_spirals, base_model, model_err, psf, mask, target, sigma,
 
     # (4/6) calculate the model's NLL
     render_delta = (r - target) / sigma
-    masked_render_delta = ops.index_update(render_delta, mask, np.nan)
+    masked_render_delta = render_delta[~mask]
     model_nll = np.nansum(norm_nnlf(masked_render_delta.ravel()))
 
     # (5/6) calculate the parameter NLL (deviation from initial conditions)
     mu_p = np.array([base_model[k0][k1] for k0, k1 in keys])
     sigma_p = np.array([model_err[k0][k1] for k0, k1 in keys])
     param_delta = (p - mu_p) / sigma_p
-    masked_param_delta = ops.index_update(
-        param_delta, (sigma_p == np.inf), np.nan
-    )
+    masked_param_delta = param_delta[sigma_p != np.inf]
     param_nll = np.nansum(norm_nnlf(masked_param_delta.ravel()))
 
     # (6/6) return the sum of the NLLs
