@@ -9,6 +9,16 @@ from .__geom_prep import ellipse_from_param_list, box_from_param_list, \
 from .__jaccard import jaccard_distance
 
 
+def circular_error(t, nsymm=1):
+    x = t * nsymm
+    v = np.array((1/len(x) * np.sin(x).sum(), 1/len(x) * np.cos(x).sum()))
+    mu = np.arctan2(v[0], v[1]) % (2 * np.pi) / nsymm
+    dt = (np.arange(15) - 7) * 2*np.pi/nsymm
+    deltas = np.abs(t.reshape(1, -1) + dt.reshape(-1, 1) - mu)
+    sd = (t + dt[np.argmin(deltas, axis=0)]).std(ddof=0)
+    return mu, sd
+
+
 def aggregate_components(clustered_models):
     """Accepts clusters of components and constructs an aggregate model
     """

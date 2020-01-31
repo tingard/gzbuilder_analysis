@@ -6,7 +6,7 @@ import gzbuilder_analysis.parsing as parsing
 from gzbuilder_analysis.config import COMPONENT_CLUSTERING_PARAMS
 from .__geom_prep import get_drawn_arms, make_ellipse, make_box
 from .__cluster import cluster_components
-from .__aggregate import aggregate_components
+from .__aggregate import circular_error, aggregate_components
 from .__aggregation_result import AggregationResult
 
 

@@ -5,7 +5,7 @@ from gzbuilder_analysis.config import DEFAULT_SPIRAL
 from .spirals import get_drawn_arms
 from .spirals.oo import Pipeline
 from .__cluster import cluster_components
-from .__aggregate import aggregate_components
+from .__aggregate import circular_error, aggregate_components
 
 
 # probably doesn't need to be a class, given it has no methods.
@@ -45,6 +45,10 @@ class AggregationResult(object):
             comp: self.clusters[comp].apply(pd.Series).std()
             for comp in ('disk', 'bulge', 'bar')
         }).apply(pd.Series).stack().rename_axis(('component', 'parameter'))
+        for comp in ('disk', 'bulge', 'bar'):
+            self.errors[comp, 'roll'] = circular_error(
+                self.clusters[comp].apply(lambda m: m['roll']).values
+            )[1]
         unconstrained_errs = pd.concat((
             self.errors.xs('I', level=1, drop_level=False),
             self.errors.xs('n', level=1, drop_level=False),

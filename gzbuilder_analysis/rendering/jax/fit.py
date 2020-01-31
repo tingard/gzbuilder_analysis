@@ -172,7 +172,7 @@ def get_limits(agg_res):
             'mux': [-np.inf, np.inf],
             'muy': [-np.inf, np.inf],
             'n': [0.5, 5],
-            'q': [0.6, 1.2],
+            'q': [0.8, 1.2],
             'roll': [-np.inf, np.inf],
             'scale': [0.05, 1],
         },
