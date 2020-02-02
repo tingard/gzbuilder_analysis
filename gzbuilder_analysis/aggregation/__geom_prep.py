@@ -3,9 +3,8 @@ from copy import deepcopy
 from shapely.geometry import box, Point
 from shapely.affinity import rotate as shapely_rotate
 from shapely.affinity import scale as shapely_scale
-from shapely.affinity import translate as shapely_translate
 from gzbuilder_analysis.config import DEFAULT_DISK
-from ..parsing.__sanitize import sanitize_param_dict
+
 
 def reset_task_scale_slider(task):
     _t = deepcopy(task)
@@ -21,27 +20,31 @@ def remove_scaling(annotation):
 
 
 def make_ellipse(comp):
+    if not comp or comp['q'] == 0 or comp['Re'] == 0:
+        return None
     return shapely_rotate(
         shapely_scale(
             Point(comp['mux'], comp['muy']).buffer(1.0),
             xfact=comp['Re'] * comp['q'],
             yfact=comp['Re']
         ),
-        np.rad2deg(comp['roll'])
-    ) if comp else None
+        comp['roll'],
+        use_radians=True,
+    )
 
 
 def make_box(comp):
-    if not comp or comp['q'] == 0:
+    if not comp or comp['q'] == 0 or comp['Re'] == 0:
         return None
     return shapely_rotate(
         box(
-            comp['mux'] - comp['Re'] / 2,
-            comp['muy'] - comp['Re'] / 2 / comp['q'],
-            comp['mux'] + comp['Re'] / 2,
-            comp['muy'] + comp['Re'] / 2 / comp['q'],
+            comp['mux'] - comp['Re'] / 2 * comp['q'],
+            comp['muy'] - comp['Re'] / 2,
+            comp['mux'] + comp['Re'] / 2 * comp['q'],
+            comp['muy'] + comp['Re'] / 2,
         ),
-        np.rad2deg(comp['roll'])
+        comp['roll'],
+        use_radians=True,
     )
 
 
@@ -54,13 +57,13 @@ def get_param_list(d):
 
 
 def get_param_dict(p):
-    return sanitize_param_dict({
+    return {
         k: v
         for k, v in zip(
             ('mux', 'muy', 'Re', 'q', 'roll'),
             p.tolist()
         )
-    })
+    }
 
 
 def ellipse_from_param_list(p):

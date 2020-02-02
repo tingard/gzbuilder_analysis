@@ -6,7 +6,7 @@ from scipy.interpolate import splprep, splev
 from shapely.affinity import scale as shapely_scale
 from shapely.affinity import translate as shapely_translate
 from .__reproject import reproject_model
-from .__sanitize import sanitize_spiral_param_dict, sanitize_param_dict, sanitize_model, sanitize_pandas_params
+from .__sanitize import sanitize_model
 from .__pandas import to_pandas, from_pandas
 
 
@@ -20,16 +20,16 @@ def parse_sersic_comp(comp, image_size, ignore_scale=False, **kwargs):
     drawing = comp['value'][0]['value'][0]
     major_axis = max(drawing['rx'], drawing['ry'])
     minor_axis = min(drawing['rx'], drawing['ry'])
-    roll = drawing['angle'] + 90 * int(drawing['rx'] > drawing['ry'])
+    roll = np.deg2rad(drawing['angle'] + 90 * int(drawing['rx'] > drawing['ry']))
     out = {
         'mux': drawing['x'],
         'muy': image_size[0] - drawing['y'],
-        'roll': np.deg2rad(roll),
+        'roll': roll,
         # in the original rendering code, minor axis was used instead of major
         # and a scaling of 3 was present
         'Re': max(
             1e-5,
-            minor_axis * (
+            major_axis * (
                 float(comp['value'][1]['value'])
                 if not ignore_scale else 1
             )

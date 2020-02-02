@@ -2,20 +2,37 @@ import numpy as np
 import pandas as pd
 from scipy.optimize import minimize
 from gzbuilder_analysis.config import DEFAULT_SPIRAL
-from gzbuilder_analysis.parsing import downsample
-from gzbuilder_analysis.parsing import sanitize_param_dict
+from gzbuilder_analysis.parsing import downsample, sanitize_model
 from .__geom_prep import ellipse_from_param_list, box_from_param_list, \
     get_param_dict, get_param_list, make_ellipse, make_box
-from .__jaccard import jaccard_distance
+from .jaccard import jaccard_distance
+from gzbuilder_analysis.config import COMPONENT_PARAM_BOUNDS
+
+
+DISK_LIMITS = np.array([
+    COMPONENT_PARAM_BOUNDS['disk'][k]
+    for k in ('mux', 'muy', 'Re', 'q', 'roll')
+])
+
+BULGE_LIMITS = np.array([
+    COMPONENT_PARAM_BOUNDS['bulge'][k]
+    for k in ('mux', 'muy', 'Re', 'q', 'roll')
+])
+
+BAR_LIMITS = np.array([
+    COMPONENT_PARAM_BOUNDS['bar'][k]
+    for k in ('mux', 'muy', 'Re', 'q', 'roll')
+])
 
 
 def circular_error(t, nsymm=1):
+    assert(len(t) > 0)
     x = t * nsymm
     v = np.array((1/len(x) * np.sin(x).sum(), 1/len(x) * np.cos(x).sum()))
     mu = np.arctan2(v[0], v[1]) % (2 * np.pi) / nsymm
     dt = (np.arange(15) - 7) * 2*np.pi/nsymm
     deltas = np.abs(t.reshape(1, -1) + dt.reshape(-1, 1) - mu)
-    sd = (t + dt[np.argmin(deltas, axis=0)]).std(ddof=0)
+    sd = (t + dt[np.argmin(deltas, axis=0)]).std(ddof=1)
     return mu, sd
 
 
@@ -33,7 +50,8 @@ def aggregate_components(clustered_models):
         aggregate_disk = {
             **aggregate_geom_jaccard(
                 disk_cluster_geoms.values,
-                x0=get_param_list(aggregate_disk)
+                x0=get_param_list(aggregate_disk),
+                bounds=DISK_LIMITS,
             ),
             'I': 0.2,
             'n': 1.0,
@@ -50,7 +68,8 @@ def aggregate_components(clustered_models):
         aggregate_bulge = {
             **aggregate_geom_jaccard(
                 bulge_cluster_geoms.values,
-                x0=get_param_list(aggregate_bulge)
+                x0=get_param_list(aggregate_bulge),
+                bounds=BULGE_LIMITS,
             ),
             'I': 0.01,
             'n': 1.0,
@@ -68,10 +87,11 @@ def aggregate_components(clustered_models):
             **aggregate_geom_jaccard(
                 bar_cluster_geoms.values,
                 x0=get_param_list(aggregate_bar),
+                bounds=BAR_LIMITS,
                 constructor_func=box_from_param_list,
             ),
             'I': 0.01,
-            'n': 0.5,
+            'n': 1.0,
             'c': 2,
         }
     else:
@@ -89,7 +109,7 @@ def aggregate_components(clustered_models):
         ]
     except KeyError:
         agg_model['spiral'] = None
-    return agg_model
+    return sanitize_model(agg_model)
 
 
 def aggregate_model_clusters_mean(component_clusters):
@@ -103,6 +123,7 @@ def aggregate_model_clusters_mean(component_clusters):
 
 
 def aggregate_geom_jaccard(geoms, x0=np.array((256, 256, 5, 0.7, 0)),
+                           bounds=None,
                            constructor_func=ellipse_from_param_list):
     def __distance_func(p):
         p = np.array(p)
@@ -110,10 +131,6 @@ def aggregate_geom_jaccard(geoms, x0=np.array((256, 256, 5, 0.7, 0)),
         comp = constructor_func(p)
         s = sum(jaccard_distance(comp, other) for other in geoms)
         return s
-    # sanitze results rather than imposing bounds to avoid getting stuck in
-    # local minima
-    return sanitize_param_dict(
-        get_param_dict(
-            minimize(__distance_func, x0)['x']
-        )
+    return get_param_dict(
+        minimize(__distance_func, x0, bounds=bounds)['x']
     )

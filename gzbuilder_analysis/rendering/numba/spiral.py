@@ -1,7 +1,5 @@
 import numpy as np
 from numba import jit, prange
-from .sersic import sersic
-from gzbuilder_analysis.config import DEFAULT_DISK, DEFAULT_SPIRAL
 
 
 @jit(nopython=True, parallel=True)
@@ -46,37 +44,3 @@ def spiral_distance2(poly_line, x, y):
         d = (vx*t - ux)**2 + (vy*t - uy)**2
         best = np.minimum(best, d)
     return np.sqrt(best)
-
-
-def spiral_arm(arm_points=None, distances=None, params=DEFAULT_SPIRAL,
-               disk=DEFAULT_DISK, image_size=(256, 256)):
-    if arm_points is None and distances is None:
-        raise TypeError(
-            'Must provide either an (N,2) array of points,'
-            'or an (N, M) distance matrix'
-        )
-    if disk is None:
-        return np.zeros(image_size)
-    if arm_points is not None and len(arm_points) < 2:
-        return np.zeros(image_size)
-    if distances is not None and np.all(distances == 0):
-        return np.zeros(image_size)
-    if params['I'] <= 0 or params['spread'] <= 0:
-        return np.zeros(image_size)
-    cx, cy = np.meshgrid(np.arange(image_size[1]), np.arange(image_size[0]))
-
-    disk_arr = sersic(
-        cx, cy,
-        **{**disk, 'I': 1, 'Re': disk['Re'] / params['falloff']},
-    )
-    if distances is None:
-        distances = spiral_distance(
-            arm_points,
-            distances=np.zeros_like(disk_arr),
-        )
-
-    return (
-        params['I']
-        * np.exp(-distances**2 * 0.1 / max(params['spread'], 1E-10))
-        * disk_arr
-    )

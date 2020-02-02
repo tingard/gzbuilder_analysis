@@ -1,6 +1,7 @@
 import numpy as np
 import pandas as pd
 
+
 def to_pandas(model):
     # filter out empty components
     model = {k: v for k, v in model.items() if v is not None}
@@ -20,6 +21,12 @@ def to_pandas(model):
     ], names=('component', 'parameter'))
     vals = [params.get(' '.join(p), np.nan) for p in idx.values]
     return pd.Series(vals, index=idx, name='value')
+
+
+def dict_from_df(df):
+    """Quickly convert a DataFrame to a dictionary, removing any NaNs
+    """
+    return {k: v[v.notna()].to_dict() for k, v in df.items()}
 
 
 def from_pandas(params, spirals=None):

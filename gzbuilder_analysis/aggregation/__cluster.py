@@ -2,17 +2,13 @@ import json
 import numpy as np
 import pandas as pd
 from sklearn.cluster import DBSCAN
-from shapely.geometry import box, Point
-from shapely.affinity import rotate as shapely_rotate
 from shapely.affinity import scale as shapely_scale
-from shapely.affinity import translate as shapely_translate
 from gzbuilder_analysis.config import COMPONENT_CLUSTERING_PARAMS
 from gzbuilder_analysis.parsing import parse_annotation
-from gzbuilder_analysis.parsing.__sanitize import sanitize_param_dict
-from gzbuilder_analysis.aggregation.__geom_prep import make_ellipse, make_box
-from gzbuilder_analysis.aggregation.__jaccard import make_jaccard_distances
-from gzbuilder_analysis.aggregation.spirals import get_drawn_arms
-from gzbuilder_analysis.aggregation.spirals.oo import Pipeline
+from .__geom_prep import make_ellipse, make_box
+from .jaccard import make_jaccard_distances
+from .spirals import get_drawn_arms
+from .spirals.oo import Pipeline
 
 
 def cluster_components(models=None, classifications=None, image_size=(512, 512),
@@ -36,9 +32,15 @@ def cluster_components(models=None, classifications=None, image_size=(512, 512),
     # we size-up the geometries by a factor of 3 for clustering, such that the Jaccard
     # distances are not very high for all of them
     geoms = {
-        'disk': components['disk'].apply(make_ellipse).dropna().apply(shapely_scale, xfact=3, yfact=3),
-        'bulge': components['bulge'].apply(make_ellipse).dropna().apply(shapely_scale, xfact=3, yfact=3),
-        'bar': components['bar'].apply(make_box).dropna().apply(shapely_scale, xfact=3, yfact=3),
+        'disk': components['disk'].apply(
+            make_ellipse
+        ).dropna().apply(shapely_scale, xfact=3, yfact=3),
+        'bulge': components['bulge'].apply(
+            make_ellipse
+        ).dropna().apply(shapely_scale, xfact=3, yfact=3),
+        'bar': components['bar'].apply(
+            make_box
+        ).dropna().apply(shapely_scale, xfact=3, yfact=3),
     }
     clusters = {
         k: components[k].loc[cluster_geoms(
@@ -67,8 +69,8 @@ def cluster_components(models=None, classifications=None, image_size=(512, 512),
 
 
 def cluster_geoms(geoms, eps, min_samples):
-    """accepts a Series of geometries and returns only the geometries in the largest
-    cluster (preserving Index)
+    """accepts a Series of geometries and returns only the geometries in the
+    largest cluster (preserving Index)
     """
     labels = get_cluster_labels(geoms, eps, min_samples)
     if len(labels[labels >= 0].dropna()) == 0:

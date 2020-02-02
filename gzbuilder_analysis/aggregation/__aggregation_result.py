@@ -46,9 +46,11 @@ class AggregationResult(object):
             for comp in ('disk', 'bulge', 'bar')
         }).apply(pd.Series).stack().rename_axis(('component', 'parameter'))
         for comp in ('disk', 'bulge', 'bar'):
-            self.errors[comp, 'roll'] = circular_error(
-                self.clusters[comp].apply(lambda m: m['roll']).values
-            )[1]
+            if self.model[comp] is not None:
+                self.errors[comp, 'roll'] = circular_error(
+                    self.clusters[comp].apply(lambda m: m['roll']).values,
+                    2
+                )[1]
         unconstrained_errs = pd.concat((
             self.errors.xs('I', level=1, drop_level=False),
             self.errors.xs('n', level=1, drop_level=False),

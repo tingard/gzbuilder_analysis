@@ -1,24 +1,6 @@
 import cupy as cp
+from scipy.special import gamma
 from ..__oversample import oversampled_function
-
-
-def roll_coordinates(x, y, mux, muy, roll, _p=None):
-    if _p is None:
-        _p = cp.get_array_module(x)
-    cosphi = _p.cos(roll)
-    sinphi = _p.sin(roll)
-    xp = x * cosphi + y * _p.sin(roll) + mux - mux * cosphi - muy * sinphi
-    yp = - x * sinphi + y * cosphi + muy + mux * sinphi - muy * cosphi
-    return xp, yp
-
-
-def boxy_radius(xp, yp, mux, muy, q, c, _p=None):
-    if _p is None:
-        _p = cp.get_array_module(xp)
-    return _p.power(
-        _p.power(_p.abs(xp - mux) / q, c) + _p.power(_p.abs((yp - muy)), c),
-        1 / c
-    )
 
 
 def _b(n):
@@ -28,18 +10,39 @@ def _b(n):
         - 2194697/30690717750/n**4
 
 
-def sersic2d(x=0, y=0, mux=0, muy=0, roll=0, Re=1, q=1, c=2, I=1, n=1):
-    # https://www.cambridge.org/core/services/aop-cambridge-core/content/view/S132335800000388X
-    # note that we rename q from above to q here
-    _p = cp.get_array_module(x)
-    r = boxy_radius(
-        *roll_coordinates(x, y, mux, muy, roll, _p=_p),
-        mux, muy, q, c, _p=_p
+def __rotation_matrix(a):
+    return cp.array(((cp.cos(a), cp.sin(a)), (-cp.sin(a), cp.cos(a))))
+
+
+def sersic(x, y, mux=0, muy=0, roll=0, q=1, c=2, I=1, Re=1, n=1):
+    # negative of roll as we are looking backwards for the correct radial value
+    rm = __rotation_matrix(-roll)
+    qm = cp.array(((q, 0), (0, 1)))
+    mu = cp.array((muy, mux))
+    P = cp.stack((x.ravel(), y.ravel()))
+    dp = (cp.expand_dims(mu, 1) - P)
+    R = cp.sum(cp.dot(qm, cp.dot(rm, dp))**c, axis=0)**(1/c)
+    intensity = I * cp.exp(-(_b(n) * ((R / Re)**(1/n)) - 1))
+    return intensity.reshape(x.shape)
+
+
+def sersic_ltot(I, Re, n):
+    return (
+        2 * cp.pi * I * Re**2 * n
+        * cp.exp(_b(n)) / _b(n)**(2 * n)
+        * gamma(2.0 * n)
     )
-    return I * _p.exp(-_b(n) * (_p.power(r / Re, 1.0/n) - 1))
 
 
-__oversampled_sersic = oversampled_function(sersic2d, cp)
+def sersic_I(L, Re, n):
+    return L / (
+        2 * cp.pi * Re**2 * n
+        * cp.exp(_b(n)) / _b(n)**(2 * n)
+        * gamma(2.0 * n)
+    )
+
+
+__oversampled_sersic = oversampled_function(sersic, cp)
 
 
 def oversampled_sersic_component(comp, image_size=(256, 256), oversample_n=5,

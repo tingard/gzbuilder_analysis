@@ -2,8 +2,8 @@ import numpy as np
 from copy import deepcopy
 from scipy.signal import convolve2d
 from numba import jit
-from gzbuilder_analysis.rendering.sersic import oversampled_sersic_component
-from gzbuilder_analysis.rendering.spiral import spiral_arm
+from .sersic import oversampled_sersic_component
+from .spiral import spiral_arm
 
 
 # mimic CuPy's get_array_module but always return numpy

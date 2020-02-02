@@ -41,7 +41,7 @@ SPIRAL_MERGING_THRESHOLD = 5E-4
 COMPONENT_CLUSTERING_PARAMS = {
     'disk': {'eps': 0.3, 'min_samples': 5},
     'bulge': {'eps': 0.3, 'min_samples': 3},
-    'bar': {'eps': 0.3846467, 'min_samples': 3},
+    'bar': {'eps': 0.4688856566803355, 'min_samples': 3},
     'max_bar_axratio': 0.6,
 }
 
@@ -83,30 +83,48 @@ PARAM_BOUNDS = {
 }
 
 
-# dict of parameter limits and default values
-BAD_PARAM_VALUES = {
+COMPONENT_PARAM_BOUNDS = {
     'disk': {
-        # inf not 1 as q of 1 is okay
-        'q': (0, 0.5, np.inf),
-        'scale': (0, 2, 1),
-        'I': (0, 1, 0.2),
+        'I': [0.0, np.inf],
+        'L': [0.0, np.inf],
+        'mux': [-np.inf, np.inf],
+        'muy': [-np.inf, np.inf],
+        'q': [0.4, 1.2],
+        'roll': [-np.inf, np.inf],
+        'Re': [0.01, np.inf],
+        'n': [1, 1],
     },
     'bulge': {
-        'q': (0, 0.5, np.inf),
-        'scale': (0, 2, 1),
-        'I': (0, 2, 0.5),
-        'n': (0.5, 5, 1),
+        'I': [0.0, np.inf],
+        'Re': [0.0, np.inf],
+        'frac': [0.0, 0.99],
+        'mux': [-np.inf, np.inf],
+        'muy': [-np.inf, np.inf],
+        'n': [0.5, 5],
+        'c': [2, 2],
+        'q': [0.7, 1.2],
+        'roll': [-np.inf, np.inf],
+        'scale': [0.05, 1],
     },
     'bar': {
-        'roll': (-np.inf, 0.0, np.inf),
-        'scale': (0, 2, 1),
-        'I': (0, 1, 0.2),
-        'n': (0.3, 2, 0.5),
-        'c': (1.5, 3, 2),
+        'I': [0.0, np.inf],
+        'Re': [0.0, np.inf],
+        'c': [1, 6],
+        'frac': [0.0, 0.99],
+        'mux': [-np.inf, np.inf],
+        'muy': [-np.inf, np.inf],
+        'n': [0.3, 5],
+        'q': [0.05, 0.6],
+        'roll': [-np.inf, np.inf],
+        'scale': [0.05, 1],
     },
     'spiral': {
-        'I': (0, 1, 0.75),
-        'spread': (0, 2, 1),
-        'falloff': (0, 2, 1),
-    }
+        'I': [0, np.inf],
+        'A': [0, np.inf],
+        'falloff': [0.001, np.inf],
+        'phi': [-85.0, 85.0],
+        'spread': [0.05, np.inf],
+        't_min': [-np.inf, np.inf],
+        't_max': [-np.inf, np.inf],
+    },
 }

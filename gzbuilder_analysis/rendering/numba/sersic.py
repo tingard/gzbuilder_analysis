@@ -1,53 +1,43 @@
-import jax.numpy as np
-from jax import jit
-from jax.lax import lgamma
-from jax.config import config
+import numpy as np
+from numba import njit
+from scipy.special import gamma
+from ..numpy.sersic import _b as __np_b,\
+    __rotation_matrix as __rotation_matrix
 from ..__oversample import oversampled_function
 
-config.update("jax_enable_x64", True)
+
+_b = njit()(__np_b)
+__rotation_matrix = njit()(__rotation_matrix)
 
 
-@jit
-def _b(n):
-    # from https://arxiv.org/abs/astro-ph/9911078
-    return 2 * n - 1/3 + 4/405/n \
-        + 46/25515/n/n + 131/1148175/n**3 \
-        - 2194697/30690717750/n**4
-
-
-@jit
-def __rotation_matrix(a):
-    return np.array(((np.cos(a), np.sin(a)), (-np.sin(a), np.cos(a))))
-
-
-@jit
-def sersic(x, y, mux=0, muy=0, roll=0, q=1, c=2, I=1, Re=1, n=1):
+@njit
+def sersic(x, y, mux=0.0, muy=0.0, roll=0.0, q=1.0, c=2.0, I=1.0, Re=1.0, n=1.0):
     # negative of roll as we are looking backwards for the correct radial value
     rm = __rotation_matrix(-roll)
     qm = np.array(((q, 0), (0, 1)))
     mu = np.array((muy, mux))
     P = np.stack((x.ravel(), y.ravel()))
     dp = (np.expand_dims(mu, 1) - P)
-    R = (np.sum(np.dot(qm, np.dot(rm, dp))**c, axis=0)**(1/c)).reshape(x.shape)
+    R = np.sum(np.dot(qm, np.dot(rm, dp))**c, axis=0)**(1/c)
     intensity = I * np.exp(-(_b(n) * ((R / Re)**(1/n)) - 1))
-    return intensity
+    return intensity.reshape(x.shape)
 
 
-@jit
+@njit
 def sersic_ltot(I, Re, n):
     return (
         2 * np.pi * I * Re**2 * n
         * np.exp(_b(n)) / _b(n)**(2 * n)
-        * np.exp(lgamma(2.0 * n))
+        * gamma(2.0 * n)
     )
 
 
-@jit
+@njit
 def sersic_I(L, Re, n):
     return L / (
         2 * np.pi * Re**2 * n
         * np.exp(_b(n)) / _b(n)**(2 * n)
-        * np.exp(lgamma(2.0 * n))
+        * gamma(2.0 * n)
     )
 
 

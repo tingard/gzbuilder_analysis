@@ -1,9 +1,6 @@
-import json
 import numpy as np
 import pandas as pd
-from scipy.optimize import minimize
-import gzbuilder_analysis.parsing as parsing
-from gzbuilder_analysis.config import COMPONENT_CLUSTERING_PARAMS
+from ..config import COMPONENT_CLUSTERING_PARAMS
 from .__geom_prep import get_drawn_arms, make_ellipse, make_box
 from .__cluster import cluster_components
 from .__aggregate import circular_error, aggregate_components

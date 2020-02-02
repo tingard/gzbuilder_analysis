@@ -1,2 +1,5 @@
 from .aggregation.__aggregation_result import AggregationResult
-from .fitting.__model import Model
+try:
+    from .rendering.jax import fit
+except ModuleNotFoundError:
+    pass
