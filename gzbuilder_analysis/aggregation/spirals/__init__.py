@@ -152,6 +152,19 @@ def pa_from_r_theta(r, th):
     ))
 
 
+def inclined_log_spiral(t_min, t_max, A, phi, q=1, roll=0, mux=0, muy=0, N=100,
+                        **kwargs):
+    theta = np.linspace(t_min, t_max, N)
+    Rls = A * np.exp(np.tan(np.deg2rad(phi)) * theta)
+    rot_matrix = np.array((
+        (np.cos(-roll), np.sin(-roll)),
+        (-np.sin(-roll), np.cos(-roll))
+    ))
+    return np.dot(
+        rot_matrix,
+        Rls * np.array((q * np.cos(theta), np.sin(theta)))
+    ).T + np.array((mux, muy))
+
 # def deproject_drawn_arms(drawn_arms, phi, ba):
 #     """Correct for a galaxy's inclination by deprojecting its ellipticity back
 #     to a circle

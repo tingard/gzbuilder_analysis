@@ -2,7 +2,7 @@ import numpy as np
 import pandas as pd
 from gzbuilder_analysis.parsing import to_pandas, downsample
 from gzbuilder_analysis.config import DEFAULT_SPIRAL
-from .spirals import get_drawn_arms
+from .spirals import get_drawn_arms, inclined_log_spiral
 from .spirals.oo import Pipeline
 from .__cluster import cluster_components
 from .__aggregate import circular_error, aggregate_components
@@ -37,7 +37,7 @@ class AggregationResult(object):
             self.spiral_pipeline = None
             self.spiral_arms = []
         self.model = aggregate_components(self.clusters)
-        self.model['spiral'] = [
+        spirals = [
             (downsample(a.reprojected_log_spiral), DEFAULT_SPIRAL)
             for a in self.spiral_arms
         ]
@@ -51,10 +51,31 @@ class AggregationResult(object):
                     self.clusters[comp].apply(lambda m: m['roll']).values,
                     2
                 )[1]
+        self.model['spiral'] = {}
+        for i in range(len(self.spiral_arms)):
+            arm = self.spiral_arms[i]
+            self.model['spiral'][f'I.{i}'] = spirals[i][1]['I']
+            self.model['spiral'][f'spread.{i}'] = spirals[i][1]['spread']
+            self.model['spiral'][f'A.{i}'] = arm.A
+            self.model['spiral'][f'phi.{i}'] = arm.pa * arm.chirality
+            self.model['spiral'][f't_min.{i}'] = arm.t_predict.min()
+            self.model['spiral'][f't_max.{i}'] = arm.t_predict.max()
         unconstrained_errs = pd.concat((
             self.errors.xs('I', level=1, drop_level=False),
             self.errors.xs('n', level=1, drop_level=False),
             self.errors.xs('c', level=1, drop_level=False),
         ))
         self.errors[unconstrained_errs.index] = np.inf
-        self.params = to_pandas(self.model).rename('model')
+        self.params = pd.DataFrame(self.model).unstack().dropna()
+        # self.params = to_pandas(self.model).rename('model')
+
+    def get_spirals(self):
+        s = self.model['spiral']
+        return np.array([
+            inclined_log_spiral(
+                s[f't_min.{i}'], s[f't_max.{i}'],
+                s[f'A.{i}'], s[f'phi.{i}'],
+                **self.model['disk']
+            )
+            for i in range(len(self.spiral_arms))
+        ])

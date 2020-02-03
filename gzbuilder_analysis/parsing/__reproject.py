@@ -17,6 +17,8 @@ def change_spiral_wcs(points, wcs_in, wcs_out):
 
 
 def reproject_sersic(comp, wcs_in, wcs_out):
+    if comp is None:
+        return None
     centre = np.array((comp['mux'], comp['muy']))
     major_vec = np.dot(__rotation_matrix(-comp['roll']), (0, comp['Re']))
     minor_vec = np.dot(__rotation_matrix(-comp['roll']), (comp['Re'] * comp['q'], 0))
@@ -31,12 +33,6 @@ def reproject_sersic(comp, wcs_in, wcs_out):
     new_minor_axis = np.array(
         wcs_out.all_world2pix(*wcs_in.all_pix2world(*minor_axis, 0), 0)
     )
-    # world_points = wcs_in.all_pix2world([
-    #     centre, major_axis, minor_axis
-    # ], 0)
-    # (
-    #     new_centre, new_major_axis, new_minor_axis
-    # ) = wcs_out.all_world2pix(world_points, 0)
     major_ax_vec = new_major_axis[:, 1] - new_centre
     minor_ax_vec = new_minor_axis[:, 1] - new_centre
     comp_out = {
@@ -61,11 +57,9 @@ def reproject_model(model, wcs_in, wcs_out):
     """Rotate, translate and scale model from one WCS to another
     """
     model_out = deepcopy(model)
-    for k in model_out.keys():
-        if model.get(k, None) is None:
-            continue
-        if k == 'spiral':
-            model_out[k] = reproject_spirals(model[k], wcs_in, wcs_out)
-        else:
-            model_out[k] = reproject_sersic(model[k], wcs_in, wcs_out)
-    return model_out
+    return dict(
+        disk=reproject_sersic(model_out['disk'], wcs_in, wcs_out),
+        bulge=reproject_sersic(model_out['bulge'], wcs_in, wcs_out),
+        bar=reproject_sersic(model_out['bar'], wcs_in, wcs_out),
+        spiral=reproject_spirals(model_out['spiral'], wcs_in, wcs_out)
+    )

@@ -102,6 +102,12 @@ def parse_annotation(annotation, image_size, **kwargs):
                 image_size,
                 **kwargs
             )
+    # double the disk effective radius (correction systematic error)
+    try:
+        model['disk']['Re'] *= 2
+    except TypeError:
+        # this model did not have a disk
+        pass
     return model
 
 

@@ -34,13 +34,13 @@ def cluster_components(models=None, classifications=None, image_size=(512, 512),
     geoms = {
         'disk': components['disk'].apply(
             make_ellipse
-        ).dropna().apply(shapely_scale, xfact=3, yfact=3),
+        ).dropna(),
         'bulge': components['bulge'].apply(
             make_ellipse
-        ).dropna().apply(shapely_scale, xfact=3, yfact=3),
+        ).dropna(),
         'bar': components['bar'].apply(
             make_box
-        ).dropna().apply(shapely_scale, xfact=3, yfact=3),
+        ).dropna(),
     }
     clusters = {
         k: components[k].loc[cluster_geoms(

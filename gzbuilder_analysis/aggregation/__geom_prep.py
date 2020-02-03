@@ -1,6 +1,6 @@
 import numpy as np
 from copy import deepcopy
-from shapely.geometry import box, Point
+from shapely.geometry import box, Point, LineString
 from shapely.affinity import rotate as shapely_rotate
 from shapely.affinity import scale as shapely_scale
 from gzbuilder_analysis.config import DEFAULT_DISK
@@ -20,7 +20,7 @@ def remove_scaling(annotation):
 
 
 def make_ellipse(comp):
-    if not comp or comp['q'] == 0 or comp['Re'] == 0:
+    if not comp:
         return None
     return shapely_rotate(
         shapely_scale(
@@ -34,14 +34,14 @@ def make_ellipse(comp):
 
 
 def make_box(comp):
-    if not comp or comp['q'] == 0 or comp['Re'] == 0:
+    if not comp:
         return None
     return shapely_rotate(
         box(
-            comp['mux'] - comp['Re'] / 2 * comp['q'],
-            comp['muy'] - comp['Re'] / 2,
-            comp['mux'] + comp['Re'] / 2 * comp['q'],
-            comp['muy'] + comp['Re'] / 2,
+            comp['mux'] - comp['Re'] * comp['q'],
+            comp['muy'] - comp['Re'],
+            comp['mux'] + comp['Re'] * comp['q'],
+            comp['muy'] + comp['Re'],
         ),
         comp['roll'],
         use_radians=True,

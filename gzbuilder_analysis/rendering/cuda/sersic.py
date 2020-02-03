@@ -16,14 +16,20 @@ def __rotation_matrix(a):
 
 def sersic(x, y, mux=0, muy=0, roll=0, q=1, c=2, I=1, Re=1, n=1):
     # negative of roll as we are looking backwards for the correct radial value
-    rm = __rotation_matrix(-roll)
-    qm = cp.array(((q, 0), (0, 1)))
-    mu = cp.array((muy, mux))
+    rm = __rotation_matrix(roll)
+    qm = cp.array(((1/q, 0), (0, 1)))
+    mu = np.array((mux, muy))
     P = cp.stack((x.ravel(), y.ravel()))
     dp = (cp.expand_dims(mu, 1) - P)
-    R = cp.sum(cp.dot(qm, cp.dot(rm, dp))**c, axis=0)**(1/c)
+    R = cp.power(
+        cp.sum(
+            cp.power(cp.abs(cp.dot(qm, cp.dot(rm, dp))), c),
+            axis=0
+        ),
+        1/c
+    ).reshape(x.shape)
     intensity = I * cp.exp(-(_b(n) * ((R / Re)**(1/n)) - 1))
-    return intensity.reshape(x.shape)
+    return intensity
 
 
 def sersic_ltot(I, Re, n):

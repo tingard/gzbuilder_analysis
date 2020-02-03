@@ -39,9 +39,9 @@ SPIRAL_MERGING_THRESHOLD = 5E-4
 
 # DBSCAN parameters for spiral arm clustering
 COMPONENT_CLUSTERING_PARAMS = {
-    'disk': {'eps': 0.3, 'min_samples': 5},
+    'disk': {'eps': 0.25, 'min_samples': 4},
     'bulge': {'eps': 0.3, 'min_samples': 3},
-    'bar': {'eps': 0.4688856566803355, 'min_samples': 3},
+    'bar': {'eps': 0.47839828189143974, 'min_samples': 4},
     'max_bar_axratio': 0.6,
 }
 
@@ -102,7 +102,7 @@ COMPONENT_PARAM_BOUNDS = {
         'muy': [-np.inf, np.inf],
         'n': [0.5, 5],
         'c': [2, 2],
-        'q': [0.7, 1.2],
+        'q': [0.6, 1.2],
         'roll': [-np.inf, np.inf],
         'scale': [0.05, 1],
     },
@@ -114,7 +114,7 @@ COMPONENT_PARAM_BOUNDS = {
         'mux': [-np.inf, np.inf],
         'muy': [-np.inf, np.inf],
         'n': [0.3, 5],
-        'q': [0.05, 0.6],
+        'q': [0.05, 0.5],
         'roll': [-np.inf, np.inf],
         'scale': [0.05, 1],
     },
@@ -127,4 +127,8 @@ COMPONENT_PARAM_BOUNDS = {
         't_min': [-np.inf, np.inf],
         't_max': [-np.inf, np.inf],
     },
+    'centre': {
+        'mux': [-np.inf, np.inf],
+        'muy': [-np.inf, np.inf],
+    }
 }
