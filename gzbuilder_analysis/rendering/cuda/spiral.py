@@ -40,7 +40,7 @@ def spiral_arm(arm_points=None, distances=None, params=DEFAULT_SPIRAL, disk=DEFA
         distances = cp.asarray(distances)
     render = (
         params['I']
-        * cp.exp(-distances**2 * 0.1 / max(params['spread'], 1E-10))
+        * cp.exp(-distances**2 / (2*params['spread']**2))
         * disk_arr
     )
     return render

@@ -24,7 +24,7 @@ def spiral_from_polyline(x, y, disk, points, params):
     distances = vmap_polyline_distance(points, x, y)
     return (
         params['I']
-        * np.exp(-distances**2 * 0.1 / params['spread'])
+        * np.exp(-distances**2 / (2*params['spread']**2))
         * disk
     )
 
@@ -32,6 +32,6 @@ def spiral_from_polyline(x, y, disk, points, params):
 def spiral_from_distances(disk, distances, params):
     return (
         params['I']
-        * np.exp(-distances**2 * 0.1 / params['spread'])
+        * np.exp(-distances**2 / (2*params['spread']**2))
         * disk
     )

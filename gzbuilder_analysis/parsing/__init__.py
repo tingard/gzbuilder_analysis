@@ -30,13 +30,13 @@ def parse_sersic_comp(comp, image_size, ignore_scale=False, **kwargs):
         'Re': max(
             1e-5,
             major_axis * (
-                float(comp['value'][1]['value'])
+                float(comp['value'][1]['value'] or 1)
                 if not ignore_scale else 1
             )
         ) / 3,
         'q': minor_axis / major_axis,
         'I': (
-            float(comp['value'][2]['value'])
+            float(comp['value'][2]['value'] or 1)
             if comp['value'][2]['value'] is not None
             else 0.2
         ) / (2 * 0.8),  # correct for a factor of 2 and a 1/0.8 multiplier to standardise

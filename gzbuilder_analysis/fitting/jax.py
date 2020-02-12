@@ -336,7 +336,7 @@ def _render(x, y, params, distances, psf, n_spirals):
     ))
     spiral = np.sum(
         Is
-        * np.exp(-distances**2 / (10 * spreads))
+        * np.exp(-distances**2 / (2*spreads**2))
         * spiral_disks,
         axis=-1
     )

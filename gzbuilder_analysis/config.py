@@ -12,7 +12,7 @@ DEFAULT_DISK = {
 }
 
 DEFAULT_SPIRAL = {
-    'I': 0.1, 'spread': 0.5, 'falloff': 1.0,
+    'I': 0.1, 'spread': 3, 'falloff': 1.0,
 }
 
 # Parameters for Local Outlier Factor cleaning of spiral arm clusters
