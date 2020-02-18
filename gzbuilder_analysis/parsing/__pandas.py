@@ -7,12 +7,12 @@ def to_pandas(model):
     model = {k: v for k, v in model.items() if v is not None}
 
     params = {
-        f'{comp} {param}': model[comp][param]
+        '{} {}'.format(comp, param): model[comp][param]
         for comp in ('disk', 'bulge', 'bar')
         for param in model.get(comp, {}).keys()
     }
     params.update({
-        f'spiral{i} {param}': model['spiral'][i][1][param]
+        'spiral{} {param}'.format(i): model['spiral'][i][1][param]
         for i in range(len(model['spiral']))
         for param in model['spiral'][i][1].keys()
     })
@@ -43,12 +43,12 @@ def from_pandas(params, spirals=None):
                     'Mismatch in spiral count between points and parameters'
                 )
             model['spiral'] = [
-                (np.array(spirals[i]), model.pop(f'spiral{i}'))
+                (np.array(spirals[i]), model.pop('spiral{}'.format(i)))
                 for i in range(nspirals)
             ]
         else:
             model['spiral'] = [
-                (np.array([]), model.pop(f'spiral{i}'))
+                (np.array([]), model.pop('spiral{}'.format(i)))
                 for i in range(nspirals)
             ]
     except ValueError:

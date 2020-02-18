@@ -54,12 +54,12 @@ class AggregationResult(object):
         self.model['spiral'] = {}
         for i in range(len(self.spiral_arms)):
             arm = self.spiral_arms[i]
-            self.model['spiral'][f'I.{i}'] = spirals[i][1]['I']
-            self.model['spiral'][f'spread.{i}'] = spirals[i][1]['spread']
-            self.model['spiral'][f'A.{i}'] = arm.A
-            self.model['spiral'][f'phi.{i}'] = arm.pa * arm.chirality
-            self.model['spiral'][f't_min.{i}'] = arm.t_predict.min()
-            self.model['spiral'][f't_max.{i}'] = arm.t_predict.max()
+            self.model['spiral']['I.{}'.format(i)] = spirals[i][1]['I']
+            self.model['spiral']['spread.{}'.format(i)] = spirals[i][1]['spread']
+            self.model['spiral']['A.{}'.format(i)] = arm.A
+            self.model['spiral']['phi.{}'.format(i)] = arm.pa * arm.chirality
+            self.model['spiral']['t_min.{}'.format(i)] = arm.t_predict.min()
+            self.model['spiral']['t_max.{}'.format(i)] = arm.t_predict.max()
         unconstrained_errs = pd.concat((
             self.errors.xs('I', level=1, drop_level=False),
             self.errors.xs('n', level=1, drop_level=False),
@@ -73,8 +73,8 @@ class AggregationResult(object):
         s = self.model['spiral']
         return np.array([
             inclined_log_spiral(
-                s[f't_min.{i}'], s[f't_max.{i}'],
-                s[f'A.{i}'], s[f'phi.{i}'],
+                s['t_min.{}'.format(i)], s['t_max.{}'.format(i)],
+                s['A.{}'.format(i)], s['phi.{}'.format(i)],
                 **self.model['disk']
             )
             for i in range(len(self.spiral_arms))

@@ -164,13 +164,13 @@ def get_reparametrized_erros(agg_res):
     ))
 
     for i in range(len(agg_res.spiral_arms)):
-        errs.loc[f'I.{i}', 'spiral'] = np.inf
-        errs.loc[f'falloff.{i}', 'spiral'] = np.inf
-        errs.loc[f'spread.{i}', 'spiral'] = np.inf
-        errs.loc[f'A.{i}', 'spiral'] = 0.01
-        errs.loc[f'phi.{i}', 'spiral'] = 1
-        errs.loc[f't_min.{i}', 'spiral'] = np.deg2rad(0.5)
-        errs.loc[f't_max.{i}', 'spiral'] = np.deg2rad(0.5)
+        errs.loc['I.{}'.format(i), 'spiral'] = np.inf
+        errs.loc['falloff.{}'.format(i), 'spiral'] = np.inf
+        errs.loc['spread.{}'.format(i), 'spiral'] = np.inf
+        errs.loc['A.{}'.format(i), 'spiral'] = 0.01
+        errs.loc['phi.{}'.format(i), 'spiral'] = 1
+        errs.loc['t_min.{}'.format(i), 'spiral'] = np.deg2rad(0.5)
+        errs.loc['t_max.{}'.format(i), 'spiral'] = np.deg2rad(0.5)
     return comp_bool_indexing(errs)
 
 
@@ -205,13 +205,13 @@ def get_limits(agg_res):
             'scale': COMPONENT_PARAM_BOUNDS['bar']['scale'],
         },
         'spiral': reduce(lambda a, b: {**a, **b}, ({
-            f'I.{i}': COMPONENT_PARAM_BOUNDS['spiral']['I'],
-            f'A.{i}': COMPONENT_PARAM_BOUNDS['spiral']['A'],
-            f'falloff.{i}': COMPONENT_PARAM_BOUNDS['spiral']['falloff'],
-            f'phi.{i}': COMPONENT_PARAM_BOUNDS['spiral']['phi'],
-            f'spread.{i}': COMPONENT_PARAM_BOUNDS['spiral']['spread'],
-            f't_min.{i}': COMPONENT_PARAM_BOUNDS['spiral']['t_min'],
-            f't_max.{i}': COMPONENT_PARAM_BOUNDS['spiral']['t_max'],
+            'I.{}'.format(i): COMPONENT_PARAM_BOUNDS['spiral']['I'],
+            'A.{}'.format(i): COMPONENT_PARAM_BOUNDS['spiral']['A'],
+            'falloff.{}'.format(i): COMPONENT_PARAM_BOUNDS['spiral']['falloff'],
+            'phi.{}'.format(i): COMPONENT_PARAM_BOUNDS['spiral']['phi'],
+            'spread.{}'.format(i): COMPONENT_PARAM_BOUNDS['spiral']['spread'],
+            't_min.{}'.format(i): COMPONENT_PARAM_BOUNDS['spiral']['t_min'],
+            't_max.{}'.format(i): COMPONENT_PARAM_BOUNDS['spiral']['t_max'],
         } for i in range(n_spirals))) if n_spirals > 0 else {},
         'centre': COMPONENT_PARAM_BOUNDS['centre'],
     }
@@ -323,9 +323,9 @@ def _render(x, y, params, distances, psf, n_spirals):
         model['bar']['I'], model['bar']['Re'], model['bar']['n']
     )
 
-    Is = np.array([model['spiral'][f'I.{i}'] for i in range(n_spirals)])
+    Is = np.array([model['spiral']['I.{}'.format(i)] for i in range(n_spirals)])
     spreads = np.array([
-        model['spiral'][f'spread.{i}'] for i in range(n_spirals)
+        model['spiral']['spread.{}'.format(i)] for i in range(n_spirals)
     ])
     spiral_disks = downsample(sersic(
         np.expand_dims(x, -1),
@@ -384,8 +384,10 @@ def _get_distances(cx, cy, model, n_spirals):
         spirals = [
             # t_min, t_max, A, phi, q, roll, mux, muy, N
             logsp(
-                model['spiral'][f't_min.{i}'], model['spiral'][f't_max.{i}'],
-                model['spiral'][f'A.{i}'], model['spiral'][f'phi.{i}'],
+                model['spiral']['t_min.{}'.format(i)],
+                model['spiral']['t_max.{}'.format(i)],
+                model['spiral']['A.{}'.format(i)],
+                model['spiral']['phi.{}'.format(i)],
                 model['disk']['q'], model['disk']['roll'],
                 model['disk']['mux'], model['disk']['muy'],
                 200,
@@ -529,8 +531,9 @@ class Optimizer():
         s = self.model['spiral']
         return np.array([
             _logsp(
-                s[f't_min.{i}'], s[f't_max.{i}'],
-                s[f'A.{i}'], s[f'phi.{i}'],
+                s['t_min.{}'.format(i)],
+                s['t_max.{}'.format(i)],
+                s['A.{}'.format(i)], s['phi.{}'.format(i)],
                 mux=self.model['disk']['mux'],
                 muy=self.model['disk']['muy'],
                 q=self.model['disk']['q'],

@@ -56,7 +56,7 @@ class Model():
                 (comp, param) for comp in cfg.ALL_PARAMS.keys()
                 for param in cfg.ALL_PARAMS[comp] if comp is not 'spiral'
             ] + [
-                (f'spiral{i}', param)
+                ('spiral{}'.format(i), param)
                 for i in range(self.nspirals)
                 for param in cfg.ALL_PARAMS['spiral']
             ],
@@ -115,7 +115,7 @@ class Model():
                     self._cache['spiral'] = sum([
                         rg.spiral_arm(
                             distances=self.spiral_distances[i],
-                            params=self.params[f'spiral{i}'].to_dict(),
+                            params=self.params['spiral{}'.format(i)].to_dict(),
                             disk=cleaned_params['disk'].to_dict(),
                             image_size=self.data.shape,
                         )
