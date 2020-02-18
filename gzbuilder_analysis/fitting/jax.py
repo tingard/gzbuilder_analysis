@@ -219,25 +219,30 @@ def get_limits(agg_res):
 
 # this is a duplicate of "inclined_log_spiral" from aggregation.spirals.__init__
 # using jax
-def _logsp(t_min, t_max, A, phi, q, roll, mux, muy, N):
+@jit
+def rot_matrix(a):
+    return np.array((
+        (np.cos(a), np.sin(a)),
+        (-np.sin(a), np.cos(a))
+    ))
+
+
+def _logsp(t_min, t_max, A, phi, q, psi, dpsi, mux, muy, N):
     theta = np.linspace(t_min, t_max, N)
     Rls = A * np.exp(np.tan(np.deg2rad(phi)) * theta)
-    rot_matrix = np.array((
-        (np.cos(-roll), np.sin(-roll)),
-        (-np.sin(-roll), np.cos(-roll))
-    ))
-    return np.dot(
-        rot_matrix,
-        Rls * np.array((q * np.cos(theta), np.sin(theta)))
-    ).T + np.array((mux, muy))
+    qmx = np.array(((q, 0), (0, 1)))
+    mx = np.dot(rot_matrix(-psi), np.dot(qmx, rot_matrix(dpsi)))
+    return (
+        Rls * np.dot(mx, np.array((np.cos(theta), np.sin(theta))))
+    ).T + np.array([mux, muy])
 
 
-logsp = jit(_logsp, static_argnums=(8,))
+logsp = jit(_logsp, static_argnums=(9,))
 
 
-def log_spiral(t_min=0, t_max=2*np.pi, A=0.1, phi=10, q=0, roll=0, mux=0, muy=0,
-               N=200, **kwargs):
-    return logsp(t_min, t_max, A, phi, q, roll, mux, muy, N)
+def log_spiral(t_min=0, t_max=2*np.pi, A=0.1, phi=10, q=0, roll=0,
+               delta_roll=0, mux=0, muy=0, N=200, **kwargs):
+    return logsp(t_min, t_max, A, phi, q, roll, delta_roll, mux, muy, N)
 
 
 def downsample(arr, n=5):
@@ -379,17 +384,21 @@ def _make_xy_arrays(target, On):
     return (cx, cy), (cx_super, cy_super)
 
 
-def _get_distances(cx, cy, model, n_spirals):
+def _get_distances(cx, cy, model, base_model, n_spirals):
+    delta_roll = model['disk']['roll'] - base_model['disk']['roll']
     if n_spirals > 0:
         spirals = [
-            # t_min, t_max, A, phi, q, roll, mux, muy, N
+            # t_min, t_max, A, phi, q, psi, dpsi, mux, muy, N
             logsp(
                 model['spiral']['t_min.{}'.format(i)],
                 model['spiral']['t_max.{}'.format(i)],
                 model['spiral']['A.{}'.format(i)],
                 model['spiral']['phi.{}'.format(i)],
-                model['disk']['q'], model['disk']['roll'],
-                model['disk']['mux'], model['disk']['muy'],
+                model['disk']['q'],
+                model['disk']['roll'],
+                delta_roll,
+                model['disk']['mux'],
+                model['disk']['muy'],
                 200,
             )
             for i in range(n_spirals)
@@ -412,7 +421,7 @@ def make_step(keys, n_spirals, base_model, model_err, psf, mask, target,
         new_params = to_dict(p, keys)
         model = {k: {**base_model[k], **new_params.get(k, {})} for k in base_model}
         # (2/6) obtain spiral arms from parameters and calculate distance matrices
-        distances = _get_distances(cx, cy, model, n_spirals)
+        distances = _get_distances(cx, cy, model, base_model, n_spirals)
 
         # (3/6) render the model
         r = render(cx_super, cy_super, model, distances, psf, n_spirals)
@@ -441,7 +450,7 @@ def _create_model(p, keys, n_spirals, base_model, psf, target, On=5):
     new_params = to_dict(p, keys)
     model = {k: {**base_model[k], **new_params.get(k, {})} for k in base_model}
     # (2/6) obtain spiral arms from parameters and calculate distance matrices
-    distances = _get_distances(cx, cy, model, n_spirals)
+    distances = _get_distances(cx, cy, model, base_model, n_spirals)
     # (3/6) render the model
     return render(cx_super, cy_super, model, distances, psf, n_spirals)
 
@@ -528,17 +537,22 @@ class Optimizer():
         self.__prep()
 
     def get_spirals(self):
-        s = self.model['spiral']
+        delta_roll = (
+            self.model['disk']['roll']
+            - self.aggregation_result.params['disk']['roll']
+        )
         return np.array([
-            _logsp(
-                s['t_min.{}'.format(i)],
-                s['t_max.{}'.format(i)],
-                s['A.{}'.format(i)], s['phi.{}'.format(i)],
-                mux=self.model['disk']['mux'],
-                muy=self.model['disk']['muy'],
-                q=self.model['disk']['q'],
-                roll=self.model['disk']['roll'],
-                N=100,
+            logsp(
+                self.model['spiral']['t_min.{}'.format(i)],
+                self.model['spiral']['t_max.{}'.format(i)],
+                self.model['spiral']['A.{}'.format(i)],
+                self.model['spiral']['phi.{}'.format(i)],
+                self.model['disk']['q'],
+                self.model['disk']['roll'],
+                delta_roll,
+                self.model['disk']['mux'],
+                self.model['disk']['muy'],
+                100,
             )
             for i in range(self.n_spirals)
         ])
