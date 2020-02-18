@@ -123,7 +123,7 @@ COMPONENT_PARAM_BOUNDS = {
         'A': [0, np.inf],
         'falloff': [0.001, np.inf],
         'phi': [-85.0, 85.0],
-        'spread': [0.05, np.inf],
+        'spread': [0.5, np.inf],
         't_min': [-np.inf, np.inf],
         't_max': [-np.inf, np.inf],
     },
