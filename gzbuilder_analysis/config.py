@@ -89,7 +89,7 @@ COMPONENT_PARAM_BOUNDS = {
         'L': [0.0, np.inf],
         'mux': [-np.inf, np.inf],
         'muy': [-np.inf, np.inf],
-        'q': [0.4, 1.2],
+        'q': [0.25, 1.2],
         'roll': [-np.inf, np.inf],
         'Re': [0.01, np.inf],
         'n': [1, 1],
