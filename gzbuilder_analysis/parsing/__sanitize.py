@@ -28,10 +28,11 @@ def sanitize_model(params):
             # (2 degrees of rotational symmetry)
             new_params[k0]['roll'] = new_params[k0]['roll'] % np.pi
         else:
-            for i in range(len(new_params[k0])):
-                for k1 in new_params[k0][i][1]:
-                    new_params[k0][i][1][k1] = np.clip(
-                        new_params[k0][i][1][k1],
-                        *COMPONENT_PARAM_BOUNDS[k0].get(k1, (-np.inf, np.inf))
-                    )
+            if type(new_params[k0]) in (list, tuple):
+                for i in range(len(new_params[k0])):
+                    for k1 in new_params[k0][i][1]:
+                        new_params[k0][i][1][k1] = np.clip(
+                            new_params[k0][i][1][k1],
+                            *COMPONENT_PARAM_BOUNDS[k0].get(k1, (-np.inf, np.inf))
+                        )
     return new_params

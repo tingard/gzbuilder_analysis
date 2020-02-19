@@ -302,15 +302,20 @@ def remove_invisible_components(model):
     for k in ('disk', 'bulge', 'bar'):
         if model[k]['I'] == 0.0 or model[k]['Re'] == 0.0:
             model[k] = None
+    i = 0
+    while True:
+        try:
+            if model['spiral']['I.{}'.format(i)] == 0:
+                for k in COMPONENT_PARAM_BOUNDS['spiral']:
+                    model['spiral'].pop('{}.{}'.format(k, i), None)
+            i += 1
+        except KeyError:
+            break
     return model
 
 
 def _render(x, y, params, distances, psf, n_spirals):
     model = from_reparametrization(params)
-    disk_I = sersic_I(params['disk']['L'], params['disk']['Re'], 1.0)
-    bulge_re = params['bulge']['scale'] * params['disk']['Re']
-    bulge_l = params['disk']['L'] * params['bulge']['frac'] / (1 - params['bulge']['frac'])
-    bulge_I = sersic_I(bulge_l, bulge_re, params['bulge']['n'])
 
     disk_super = sersic(
         x, y, model['disk']['mux'], model['disk']['muy'],
