@@ -469,6 +469,7 @@ class Optimizer():
         self.aggregation_result = aggregation_result
         self.model = to_reparametrization(aggregation_result)
         self.model_err = get_reparametrized_erros(aggregation_result)
+        self.lims = get_limits(aggregation_result)
         self.n_spirals = (
             len(aggregation_result.spiral_arms)
             if 'spiral' in components or 'all' in components
@@ -501,7 +502,6 @@ class Optimizer():
         self.sigma_param = np.array([
             self.model_err[k0][k1] for k0, k1 in self.keys
         ])
-        self.lims = get_limits(self.aggregation_result)
         self.limits = [self.lims[k0][k1] for k0, k1 in self.keys]
         self.step = make_step(
             self.keys, self.n_spirals,
