@@ -39,7 +39,7 @@ SPIRAL_MERGING_THRESHOLD = 5E-4
 
 # DBSCAN parameters for spiral arm clustering
 COMPONENT_CLUSTERING_PARAMS = {
-    'disk': {'eps': 0.25, 'min_samples': 4},
+    'disk': {'eps': 0.3, 'min_samples': 4},
     'bulge': {'eps': 0.4, 'min_samples': 4},
     'bar': {'eps': 0.47839828189143974, 'min_samples': 4},
     'max_bar_axratio': 0.6,
