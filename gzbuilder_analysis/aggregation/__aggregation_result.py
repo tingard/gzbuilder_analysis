@@ -1,23 +1,27 @@
 import numpy as np
 import pandas as pd
 from gzbuilder_analysis.parsing import to_pandas, downsample
-from gzbuilder_analysis.config import DEFAULT_SPIRAL
+from gzbuilder_analysis.config import COMPONENT_CLUSTERING_PARAMS, DEFAULT_SPIRAL
 from .spirals import get_drawn_arms, inclined_log_spiral
 from .spirals.oo import Pipeline
 from .__cluster import cluster_components
 from .__aggregate import circular_error, aggregate_components
 
 
-# probably doesn't need to be a class, given it has no methods.
 class AggregationResult(object):
-    def __init__(self, models, galaxy_data):
+    def __init__(self, models, galaxy_data,
+                 clustering_params=COMPONENT_CLUSTERING_PARAMS):
         self.clusters = cluster_components(
             models=models,
             image_size=galaxy_data.shape,
+            params=clustering_params,
             warn=False
         )
         self.input_models = models
-        self.aggregation_result = aggregate_components(self.clusters)
+        self.aggregation_result = aggregate_components(
+            self.clusters,
+            spiral_merging_distance=clustering_params['spiral']['merging_distance']
+        )
         self.phi = self.aggregation_result['disk']['roll']
         self.ba = self.aggregation_result['disk']['q']
         self.centre_pos = np.array((

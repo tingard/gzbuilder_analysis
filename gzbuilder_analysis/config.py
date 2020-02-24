@@ -28,20 +28,20 @@ SPIRAL_BAYESIAN_RIDGE_PRIORS = {
     'alpha_2': 0.6923902410146074,
 }
 
-# DBSCAN parameters for spiral arm clustering
-ARM_CLUSTERING_PARAMS = {
-    'eps': 1E-3,
-    'min_samples': 4,
-}
-
-SPIRAL_MERGING_THRESHOLD = 5E-4
-
+# # DBSCAN parameters for spiral arm clustering
+# ARM_CLUSTERING_PARAMS = {
+#     'eps': 1E-3,
+#     'min_samples': 4,
+# }
+#
+# SPIRAL_MERGING_THRESHOLD = 5E-4
 
 # DBSCAN parameters for spiral arm clustering
 COMPONENT_CLUSTERING_PARAMS = {
     'disk': {'eps': 0.3, 'min_samples': 4},
     'bulge': {'eps': 0.4, 'min_samples': 4},
     'bar': {'eps': 0.47839828189143974, 'min_samples': 4},
+    'spiral': {'eps': 1E-3, 'min_samples': 4, 'merging_distance': 5E-4},
     'max_bar_axratio': 0.6,
 }
 

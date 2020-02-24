@@ -160,7 +160,7 @@ def rot_matrix(a):
 
 
 def inclined_log_spiral(t_min, t_max, A, phi, q=1, psi=0, dpsi=0, mux=0, muy=0,
-                        N=200):
+                        N=200, **kwargs):
     theta = np.linspace(t_min, t_max, N)
     Rls = A * np.exp(np.tan(np.deg2rad(phi)) * theta)
     qmx = np.array(((q, 0), (0, 1)))

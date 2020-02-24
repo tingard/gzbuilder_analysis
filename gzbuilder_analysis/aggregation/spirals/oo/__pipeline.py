@@ -1,10 +1,10 @@
 import numpy as np
 from sklearn.cluster import DBSCAN
-from gzbuilder_analysis.config import ARM_CLUSTERING_PARAMS, \
-    SPIRAL_MERGING_THRESHOLD
+from gzbuilder_analysis.config import COMPONENT_CLUSTERING_PARAMS
 from gzbuilder_analysis.aggregation.spirals import utils, metric
 from .__arm import Arm
 
+SPIRAL_CLUSTERING_PARAMS = COMPONENT_CLUSTERING_PARAMS['spiral']
 
 class SpiralPipeline(object):
     def __init__(
@@ -12,8 +12,8 @@ class SpiralPipeline(object):
         centre_pos=None, phi=0.0, ba=1.0,  # parameters for deprojection
         bar_length=0, centre_threshold=2.5,  # parameters for central cropping
         image_size=(100, 100),
-        eps=ARM_CLUSTERING_PARAMS['eps'],
-        min_samples=ARM_CLUSTERING_PARAMS['min_samples'],
+        eps=SPIRAL_CLUSTERING_PARAMS['eps'],
+        min_samples=SPIRAL_CLUSTERING_PARAMS['min_samples'],
     ):
         self.drawn_arms = np.array(
             utils.split_arms_at_center(
@@ -40,8 +40,8 @@ class SpiralPipeline(object):
 
     def cluster_arms(
         self,
-        eps=ARM_CLUSTERING_PARAMS['eps'],
-        min_samples=ARM_CLUSTERING_PARAMS['min_samples']
+        eps=SPIRAL_CLUSTERING_PARAMS['eps'],
+        min_samples=SPIRAL_CLUSTERING_PARAMS['min_samples']
     ):
         self.db = DBSCAN(
             eps=eps,
@@ -74,7 +74,7 @@ class SpiralPipeline(object):
             for i in range(max(self.db.labels_) + 1)
         ])
 
-    def merge_arms(self, arms, threshold=SPIRAL_MERGING_THRESHOLD):
+    def merge_arms(self, arms, threshold=SPIRAL_CLUSTERING_PARAMS['merging_distance']):
         arms = np.array(arms)
         logsps = [arm.reprojected_log_spiral / self.image_size for arm in arms]
         pairs = []

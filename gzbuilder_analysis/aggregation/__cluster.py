@@ -63,7 +63,9 @@ def cluster_components(models=None, classifications=None, image_size=(512, 512),
     clusters['spiral'] = Pipeline(
         drawn_arms.values,
         phi=phi, ba=ba,
-        image_size=image_size
+        image_size=image_size,
+        eps=params['spiral']['eps'],
+        min_samples=params['spiral']['min_samples']
     )
     return clusters
 

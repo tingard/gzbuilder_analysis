@@ -560,6 +560,7 @@ class Optimizer():
                 100,
             )
             for i in range(self.n_spirals)
+            if 't_min.{}'.format(i) in self.model['spiral']
         ])
 
     def render(self, p):

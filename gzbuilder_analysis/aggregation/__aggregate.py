@@ -6,7 +6,8 @@ from gzbuilder_analysis.parsing import downsample, sanitize_model
 from .__geom_prep import ellipse_from_param_list, box_from_param_list, \
     get_param_dict, get_param_list, make_ellipse, make_box
 from .jaccard import jaccard_distance
-from gzbuilder_analysis.config import COMPONENT_PARAM_BOUNDS
+from gzbuilder_analysis.config import COMPONENT_PARAM_BOUNDS, \
+    COMPONENT_CLUSTERING_PARAMS
 
 
 DISK_LIMITS = np.array([
@@ -24,6 +25,7 @@ BAR_LIMITS = np.array([
     for k in ('mux', 'muy', 'Re', 'q', 'roll')
 ])
 
+SPIRAL_MERGING_DISTANCE = COMPONENT_CLUSTERING_PARAMS['spiral']['merging_distance']
 
 def circular_error(t, nsymm=1):
     assert(len(t) > 0)
@@ -36,7 +38,10 @@ def circular_error(t, nsymm=1):
     return mu, sd
 
 
-def aggregate_components(clustered_models):
+def aggregate_components(
+    clustered_models,
+    spiral_merging_distance=SPIRAL_MERGING_DISTANCE,
+):
     """Accepts clusters of components and constructs an aggregate model
     """
     disk_cluster_geoms = clustered_models['disk'].apply(make_ellipse)
