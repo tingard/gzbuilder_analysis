@@ -77,6 +77,6 @@ def spiral_arm(arm_points=None, distances=None, params=DEFAULT_SPIRAL,
 
     return (
         params['I']
-        * np.exp(-distances**2 * 0.1 / (2*params['spread']**2))
+        * np.exp(-distances**2 / (2*params['spread']**2))
         * disk_arr
     )

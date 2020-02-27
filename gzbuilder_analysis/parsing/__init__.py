@@ -79,8 +79,8 @@ def parse_spiral_comp(comp, image_size, size_diff=1, **kwargs):
         params = {
             # correct for 0.8 multiplier in original rendering code
             'I': float(arm['details'][0]['value']) / 0.8,
-            'spread': float(arm['details'][1]['value']) * size_diff,
-            'falloff': max(float(comp['value'][1]['value']), 1E-5),
+            'spread': float(arm['details'][1]['value'] or 0.5) * size_diff,
+            'falloff': max(float(comp['value'][1]['value'] or 1), 1E-5),
         }
         out.append((points, params))
     return out

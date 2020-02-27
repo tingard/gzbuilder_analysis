@@ -132,3 +132,10 @@ COMPONENT_PARAM_BOUNDS = {
         'muy': [-np.inf, np.inf],
     }
 }
+
+# COMPONENT_BASE_ERRORS = {
+#     'disk': {},
+#     'bulge': {},
+#     'bar': {},
+#     'spiral': {},
+# }
