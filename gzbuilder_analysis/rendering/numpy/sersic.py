@@ -1,6 +1,5 @@
 import numpy as np
-from numba import jit
-from scipy.special import gamma
+from scipy.special import beta, gamma
 from ..__oversample import oversampled_function
 
 
@@ -33,19 +32,25 @@ def sersic(x, y, mux=0.0, muy=0.0, roll=0.0, q=1.0, c=2.0, I=1.0, Re=1.0, n=1.0)
     return intensity
 
 
-def sersic_ltot(I, Re, n):
+def sersic_ltot(I, Re, q, n=1, c=2):
+    kappa = _b(n)
+    R_c = np.pi * c / (4 * beta(1/c, 1+1/c))
     return (
-        2 * np.pi * I * Re**2 * n
-        * np.exp(_b(n)) / _b(n)**(2 * n)
+        2 * np.pi * Re**2 * I * n
+        * np.exp(kappa) / kappa**(2 * n)
         * gamma(2.0 * n)
+        * q / R_c
     )
 
 
-def sersic_I(L, Re, n):
+def sersic_I(L, Re, q, n=1, c=2):
+    kappa = _b(n)
+    R_c = np.pi * c / (4 * beta(1/c, 1+1/c))
     return L / (
         2 * np.pi * Re**2 * n
-        * np.exp(_b(n)) / _b(n)**(2 * n)
+        * np.exp(kappa) / kappa**(2 * n)
         * gamma(2.0 * n)
+        * q / R_c
     )
 
 

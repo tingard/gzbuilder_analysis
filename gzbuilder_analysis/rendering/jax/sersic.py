@@ -1,10 +1,20 @@
 import jax.numpy as np
 from jax import jit
-from jax.lax import lgamma
+from jax.lax import lgamma, betainc
 from jax.config import config
 from ..__oversample import oversampled_function
 
 config.update("jax_enable_x64", True)
+
+
+@jit
+def _gamma(n):
+    return np.exp(lgamma(n))
+
+
+@jit
+def _beta(a, b):
+    return betainc(a, b, 1.0) * _gamma(a) * _gamma(b) / _gamma(a + b)
 
 
 @jit
@@ -39,20 +49,26 @@ def sersic(x, y, mux=0, muy=0, roll=0, q=1, c=2, I=1, Re=1, n=1):
 
 
 @jit
-def sersic_ltot(I, Re, n):
+def sersic_ltot(I, Re, q, n=1, c=2):
+    kappa = _b(n)
+    R_c = np.pi * c / (4 * _beta(1/c, 1+1/c))
     return (
-        2 * np.pi * I * Re**2 * n
-        * np.exp(_b(n)) / _b(n)**(2 * n)
-        * np.exp(lgamma(2.0 * n))
+        2 * np.pi * Re**2 * I * n
+        * np.exp(kappa) / kappa**(2 * n)
+        * _gamma(2.0 * n)
+        * q / R_c
     )
 
 
 @jit
-def sersic_I(L, Re, n):
+def sersic_I(L, Re, q, n=1, c=2):
+    kappa = _b(n)
+    R_c = np.pi * c / (4 * _beta(1/c, 1+1/c))
     return L / (
         2 * np.pi * Re**2 * n
-        * np.exp(_b(n)) / _b(n)**(2 * n)
-        * np.exp(lgamma(2.0 * n))
+        * np.exp(kappa) / kappa**(2 * n)
+        * _gamma(2.0 * n)
+        * q / R_c
     )
 
 

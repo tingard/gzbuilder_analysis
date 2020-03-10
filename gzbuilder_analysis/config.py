@@ -28,14 +28,6 @@ SPIRAL_BAYESIAN_RIDGE_PRIORS = {
     'alpha_2': 0.6923902410146074,
 }
 
-# # DBSCAN parameters for spiral arm clustering
-# ARM_CLUSTERING_PARAMS = {
-#     'eps': 1E-3,
-#     'min_samples': 4,
-# }
-#
-# SPIRAL_MERGING_THRESHOLD = 5E-4
-
 # DBSCAN parameters for spiral arm clustering
 COMPONENT_CLUSTERING_PARAMS = {
     'disk': {'eps': 0.3, 'min_samples': 4},
@@ -45,41 +37,12 @@ COMPONENT_CLUSTERING_PARAMS = {
     'max_bar_axratio': 0.6,
 }
 
-
 # Defaults for fitting
 ALL_PARAMS = {
     'disk':   ('mux', 'muy', 'roll', 'Re', 'q', 'I', 'n', 'c'),
     'bulge':  ('mux', 'muy', 'roll', 'Re', 'q', 'I', 'n', 'c'),
     'bar':    ('mux', 'muy', 'roll', 'Re', 'q', 'I', 'n', 'c'),
     'spiral': ('I', 'spread', 'falloff'),
-}
-
-FIT_PARAMS = {
-    'disk':   ('I', 'Re', 'q'),
-    'bulge':  ('I', 'Re', 'q', 'n'),
-    'bar':    ('I', 'Re', 'q', 'n', 'c'),
-    'spiral': ('I', 'spread', 'falloff'),
-}
-
-SLIDER_FIT_PARAMS = {
-    'disk': ('I',),
-    'bulge': ('I', 'n'),
-    'bar': ('I', 'n', 'c'),
-    'spiral': ('I', 'spread', 'falloff'),
-}
-
-
-PARAM_BOUNDS = {
-    'I': (0, np.inf),
-    'mux': (-np.inf, np.inf),
-    'muy': (-np.inf, np.inf),
-    'Re': (0, np.inf),
-    'q': (1E-2, 1E2),
-    'n': (2E-1, 10),
-    'c': (1E-1, 1E1),
-    'spread': (0, np.inf),
-    'falloff': (1E-2, np.inf),
-    'roll': (-np.inf, np.inf)
 }
 
 
@@ -132,10 +95,3 @@ COMPONENT_PARAM_BOUNDS = {
         'muy': [-np.inf, np.inf],
     }
 }
-
-# COMPONENT_BASE_ERRORS = {
-#     'disk': {},
-#     'bulge': {},
-#     'bar': {},
-#     'spiral': {},
-# }
