@@ -147,7 +147,7 @@ def __render_comps(model, has_bulge, has_bar, n_spirals, shape,
             Re=bar_Re,
             I=bar_I,
             n=model[('bar', 'n')],
-            c=2.0
+            c=model[('bar', 'c')],
         )
         out['bar'] = np.squeeze(downsample(bar_super, oversample_n))
 

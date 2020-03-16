@@ -70,6 +70,37 @@ def remove_zero_brightness_components(model):
     return model_
 
 
+def correct_spirals(model, base_roll):
+    model_ = model.copy()
+    if 'spiral' not in model:
+        return model_
+    spirals = model['spiral']
+    dpsi = model[('disk', 'roll')] - base_roll
+    for i in range(100):
+        if 'A.{}'.format(i) not in spirals:
+            continue
+        # correct_logsp_params(A, phi, q, psi, dpsi, theta)
+        A, phi, q, roll, (t_min, t_max) = correct_logsp_params(
+            spirals['A.{}'.format(i)],
+            spirals['phi.{}'.format(i)],
+            model_['disk']['q'],
+            model_['disk']['roll'],
+            dpsi,
+            np.array((
+                spirals['t_min.{}'.format(i)],
+                spirals['t_max.{}'.format(i)],
+            )),
+        )
+        new_spiral = pd.Series({
+            ('spiral', 'A.{}'.format(i)): A,
+            ('spiral', 'phi.{}'.format(i)): phi,
+            ('spiral', 't_min.{}'.format(i)): t_min,
+            ('spiral', 't_max.{}'.format(i)): t_max,
+        })
+        model_.update(new_spiral)
+    return model_
+
+
 def lower_spiral_indices(model):
     model_ = model.copy()
     if 'spiral' not in model:
@@ -104,42 +135,48 @@ def correct_axratio(model):
     for comp in ('disk', 'bulge', 'bar'):
         if comp not in model:
             continue
-        if model_[(comp, 'q')] > 1:
+        if model[(comp, 'q')] > 1:
             size_param = 'Re' if comp == 'disk' else 'scale'
+
             model_.update(pd.Series({
-                (comp, 'q'): 1 / model_[(comp, 'q')],
+                (comp, 'q'): 1 / model[(comp, 'q')],
                 (comp, size_param): (
-                    model_[(comp, 'q')]
-                    * model_[(comp, size_param)]
+                    model[(comp, 'q')]
+                    * model[(comp, size_param)]
                 ),
                 (comp, 'roll'): (
-                    (model_[(comp, 'roll')] + np.pi/2) % np.pi
+                    (model[(comp, 'roll')] + np.pi/2) % np.pi
                 ),
             }))
-    return model_
+    if model[('disk', 'q')] > 1:
+        # if we have altered the disk, make sure to update the scales of the
+        # other components
+        if 'bulge' in model:
+            model_[('bulge', 'scale')] /= model[('disk', 'q')]
+        if 'bar' in model:
+            model_[('bar', 'scale')] /= model[('disk', 'q')]
 
-
-def correct_spirals(model, base_roll):
-    model_ = model.copy()
-    if 'spiral' not in model:
-        return model_
-    spirals = model['spiral']
-    for i in range(len(spirals) // 6):
-        A, phi, q, roll, (t_min, t_max) = correct_logsp_params(
-            spirals['A.{}'.format(i)],
-            spirals['phi.{}'.format(i)],
-            model_['disk']['q'],
-            model_['disk']['roll'],
-            model_['disk']['roll'] - base_roll,
-            np.array((
-                spirals['t_min.{}'.format(i)],
-                spirals['t_max.{}'.format(i)],
-            )),
-        )
-        model_['spiral'].update(pd.Series({
-            'A.{}'.format(i): A,
-            'phi.{}'.format(i): phi,
-            't_min.{}'.format(i): t_min,
-            't_max.{}'.format(i): t_max,
-        }))
+        # if we have altered the disk, make sure we correct the spirals
+        if 'spiral' in model:
+            indices = {int(c.split('.')[1]) for c in model['spiral'].index}
+            original_q = model[('disk', 'q')]
+            for i in indices:
+                A, phi, q, roll, (t_min, t_max) = correct_logsp_params(
+                    model_[('spiral', 'A.{}'.format(i))] * original_q,
+                    model_[('spiral', 'phi.{}'.format(i))],
+                    model_[('disk', 'q')],
+                    model_[('disk', 'roll')],
+                    -np.pi / 2,
+                    np.array((
+                        model_[('spiral', 't_min.{}'.format(i))],
+                        model_[('spiral', 't_max.{}'.format(i))],
+                    ))
+                )
+                new_spiral = pd.Series({
+                    ('spiral', 'A.{}'.format(i)): A,
+                    ('spiral', 'phi.{}'.format(i)): phi,
+                    ('spiral', 't_min.{}'.format(i)): t_min,
+                    ('spiral', 't_max.{}'.format(i)): t_max,
+                })
+                model_.update(new_spiral)
     return model_
