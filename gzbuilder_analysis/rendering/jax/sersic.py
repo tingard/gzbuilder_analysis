@@ -44,7 +44,7 @@ def sersic(x, y, mux=0, muy=0, roll=0, q=1, c=2, I=1, Re=1, n=1):
         ),
         1/c
     ).reshape(x.shape)
-    intensity = I * np.exp(-(_b(n) * ((R / Re)**(1/n)) - 1))
+    intensity = I * np.exp(-_b(n) * ((R / Re)**(1/n) - 1))
     return intensity
 
 
