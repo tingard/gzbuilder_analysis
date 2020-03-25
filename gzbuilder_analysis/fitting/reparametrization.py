@@ -94,7 +94,9 @@ def from_reparametrization(model, optimizer):
         + (comps['spiral'].sum() if 'spiral' in comps else 0)
     )
     model_[('disk', 'I')] = sersic_I(
-        model_[('disk', 'L')], model_[('disk', 'Re')], model_[('disk', 'q')],
+        model_[('disk', 'L')],
+        model_[('disk', 'Re')],
+        model_[('disk', 'q')],
     )
     model_[('disk', 'L')] = np.nan
     if 'bulge' in model_:
@@ -104,7 +106,10 @@ def from_reparametrization(model, optimizer):
         )
         bulge_Re = model_[('disk', 'Re')] * model_[('bulge', 'scale')]
         bulge_I = sersic_I(
-            bulge_L, bulge_Re, model_[('bulge', 'q')], model_[('bulge', 'n')]
+            bulge_L,
+            bulge_Re,
+            model_[('bulge', 'q')],
+            model_[('bulge', 'n')],
         )
         model_[('bulge', 'mux')] = model_[('centre', 'mux')]
         model_[('bulge', 'muy')] = model_[('centre', 'muy')]
@@ -119,7 +124,11 @@ def from_reparametrization(model, optimizer):
         )
         bar_Re = model_[('disk', 'Re')] * model_[('bar', 'scale')]
         bar_I = sersic_I(
-            bar_L, bar_Re, model[('bar', 'q')], model[('bar', 'n')], model[('bar', 'c')]
+            bar_L,
+            bar_Re,
+            model[('bar', 'q')],
+            model[('bar', 'n')],
+            model[('bar', 'c')],
         )
         model_[('bar', 'mux')] = model_[('centre', 'mux')]
         model_[('bar', 'muy')] = model_[('centre', 'muy')]
