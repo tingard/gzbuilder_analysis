@@ -305,6 +305,9 @@ class Optimizer():
         self.model = self.model.update(other)
         self.model_ = self.model.to_dict()
 
+    def __getitem__(self, key):
+        return self.model[key]
+
     def __setitem__(self, key, val):
         self.model[key] = val
         self.model_ = self.model.to_dict()

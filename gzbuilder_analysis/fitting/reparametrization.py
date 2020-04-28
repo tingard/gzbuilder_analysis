@@ -7,7 +7,6 @@ from ..rendering.jax.sersic import sersic, sersic_ltot, sersic_I
 from gzbuilder_analysis.config import COMPONENT_PARAM_BOUNDS
 from .misc import df_to_dict
 
-
 EMPTY_SERSIC = pd.Series(
     dict(mux=np.nan, muy=np.nan, Re=0.5, roll=0, q=1, I=0, n=1, c=2)
 )
