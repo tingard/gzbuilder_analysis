@@ -67,7 +67,7 @@ def spiral_arm(arm_points=None, distances=None, params=DEFAULT_SPIRAL,
 
     disk_arr = sersic(
         cx, cy,
-        **{**disk, 'I': 1, 'Re': disk['Re'] / params['falloff']},
+        **{**disk, 'I': disk['I'], 'Re': disk['Re'] / params['falloff']},
     )
     if distances is None:
         distances = spiral_distance(
