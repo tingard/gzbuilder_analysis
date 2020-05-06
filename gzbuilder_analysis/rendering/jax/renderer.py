@@ -4,6 +4,7 @@ from jax.lax import conv
 from .sersic import sersic_I, sersic
 from .spiral import translate_spiral, \
     corrected_inclined_lsp, vmap_polyline_distance, correct_logsp_params
+from gzbuilder_analysis.fitting.reparametrization import to_reparametrization
 
 
 def _make_xy_arrays(shape, On):
@@ -197,15 +198,20 @@ class Renderer():
         self.oversample_n = oversample_n
         self.P, self.P_super = _make_xy_arrays(shape, oversample_n)
 
-    def __call__(model):
+    def __call__(self, model, oversample_n=None):
         # convert to reparametrization
-        # model = to_reparametrization(model)
+        model = to_reparametrization(model)
         # # render components
-        # rendered_components = render_comps(
-        #     model, has_bulge, has_bar, n_spirals, shape,
-        #     oversample_n, base_roll
-        # )
+        has_bulge = ('bulge', 'n') in model
+        has_bar = ('bar', 'c') in model
+        try:
+            n_spirals = max(int(i[1].split('.')[1]) for i in model if i[0] == 'spiral')
+        except ValueError:
+            n_spirals = 0
+        rendered_components = render_comps(
+            model, has_bulge, has_bar, n_spirals, self.shape,
+            self.oversample_n, model.get(('disk', 'roll'), 0)
+        )
         # # PSF convolve
-        # blurred_render = psf_conv(sum(rendered_components.values()), psf)
-        # return blurred_render
-        pass
+        blurred_render = psf_conv(sum(rendered_components.values()), self.psf)
+        return blurred_render
