@@ -25,6 +25,25 @@ def get_drawn_arms(models, min_n=5):
     tuples = [
         (i, j)
         for i in models.index
+        for j in range(models.loc[i]['spiral']['n_arms'])
+    ]
+    idx = pd.MultiIndex.from_tuples(tuples, names=['model_index', 'arm_index'])
+    return pd.Series([
+        np.asarray(m['spiral']['points.{}'.format(i)])
+        if len(m['spiral']['points.{}'.format(i)]) > min_n and LineString(m['spiral']['points.{}'.format(i)]).is_simple
+        else np.nan
+        for _,  m in models.iteritems()
+        for i in range(m['spiral']['n_arms'])
+    ], index=idx).dropna()
+
+
+def get_drawn_arms_old(models, min_n=5):
+    """Extract the drawn spiral arms from a Series of models, removing
+    self-intersecting lines and lines with fewer than min_n points
+    """
+    tuples = [
+        (i, j)
+        for i in models.index
         for j in range(len(models.loc[i]['spiral']))
     ]
     idx = pd.MultiIndex.from_tuples(tuples, names=['model_index', 'arm_index'])

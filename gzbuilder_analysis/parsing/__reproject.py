@@ -47,10 +47,10 @@ def reproject_sersic(comp, wcs_in, wcs_out):
 
 
 def reproject_spirals(spirals, wcs_in, wcs_out):
-    return [
-        [change_spiral_wcs(spiral[0], wcs_in, wcs_out), spiral[1]]
-        for spiral in spirals
-    ]
+    return {**spirals, **{
+        'points.{}'.format(i): change_spiral_wcs(spirals['points.{}'.format(i)], wcs_in, wcs_out)
+        for i in range(spirals['n_arms'])
+    }}
 
 
 def reproject_model(model, wcs_in, wcs_out):

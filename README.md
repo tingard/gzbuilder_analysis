@@ -4,11 +4,18 @@ This repository contains a suite of software utilities which allow the aggregati
 
 ## Getting Started
 
-This package allows a number of different manipulations of Galaxy Builder models, including aggregating many models using `gzbuilder_analysis.aggregation`, calculating aggregate logarithmic spirals using `gzbuilder_analysis.spirals`, rendering volunteer and aggregate models using `gzbuilder_analysis.rendering` and tuning models using `gzbuilder_analysis.fitting`.
+This package allows a number of different manipulations of Galaxy Builder models, including aggregating many models using `gzbuilder_analysis.aggregation`, calculating aggregate logarithmic spirals using `gzbuilder_analysis.aggregation.spirals`, rendering volunteer and aggregate models using `gzbuilder_analysis.rendering` and tuning models using `gzbuilder_analysis.fitting`.
 
-A fairly comprehensive overview of what you can do can be seen in [this PDF](https://github.com/tingard/gzbuilder_analysis/tree/master/example_use.pdf). It is worth noting that some custom code used there is not publicly available (yet), namely the `galaxy_utilities.py` script used to obtain classifications and galaxy metadata from pre-calculated files.
 
+## Examples 
+
+A series of examples can be found in the `examples` folder, including 
+
+- [A full run through of rendering a synthetic image, aggregating volunteer classifications and fitting the aggregate model](examples/full-worked-example.ipynb)
+- [An in-depth look at the Jaccard clustering method](examples/jaccard-clustering.ipynb)
+- [An in-depth look at Spiral arm clustering](examples/spiral-clustering.ipynb)
+- An in-depth look at model fitting (TBA)
 
 ## Contributing
 
-If you would like to help, pull requests are always welcome! If you would like access to a Galaxy Builder data dump, please contact the repository owners.
+If you would like to help, pull requests are always welcome! If you would like access to a Galaxy Builder data dump, please contact the repository owner(s).

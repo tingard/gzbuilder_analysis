@@ -40,7 +40,7 @@ class AggregationResult(object):
         else:
             self.spiral_pipeline = None
             self.spiral_arms = []
-        self.model = aggregate_components(self.clusters)
+        self._model_dict = aggregate_components(self.clusters)
         spirals = [
             (downsample(a.reprojected_log_spiral), DEFAULT_SPIRAL)
             for a in self.spiral_arms
@@ -50,27 +50,28 @@ class AggregationResult(object):
             for comp in ('disk', 'bulge', 'bar')
         }).apply(pd.Series).stack().rename_axis(('component', 'parameter'))
         for comp in ('disk', 'bulge', 'bar'):
-            if self.model[comp] is not None:
+            if self._model_dict[comp] is not None:
                 self.errors[comp, 'roll'] = circular_error(
                     self.clusters[comp].apply(lambda m: m['roll']).values,
                     2
                 )[1]
-        self.model['spiral'] = {}
+        self._model_dict['spiral'] = {}
         for i in range(len(self.spiral_arms)):
             arm = self.spiral_arms[i]
-            self.model['spiral']['I.{}'.format(i)] = spirals[i][1]['I']
-            self.model['spiral']['spread.{}'.format(i)] = spirals[i][1]['spread']
-            self.model['spiral']['A.{}'.format(i)] = arm.A
-            self.model['spiral']['phi.{}'.format(i)] = arm.pa * arm.chirality
-            self.model['spiral']['t_min.{}'.format(i)] = arm.t_predict.min()
-            self.model['spiral']['t_max.{}'.format(i)] = arm.t_predict.max()
+            self._model_dict['spiral']['I.{}'.format(i)] = spirals[i][1]['I']
+            self._model_dict['spiral']['spread.{}'.format(i)] = spirals[i][1]['spread']
+            self._model_dict['spiral']['A.{}'.format(i)] = arm.A
+            self._model_dict['spiral']['phi.{}'.format(i)] = arm.pa * arm.chirality
+            self._model_dict['spiral']['t_min.{}'.format(i)] = arm.t_predict.min()
+            self._model_dict['spiral']['t_max.{}'.format(i)] = arm.t_predict.max()
         unconstrained_errs = pd.concat((
             self.errors.xs('I', level=1, drop_level=False),
             self.errors.xs('n', level=1, drop_level=False),
             self.errors.xs('c', level=1, drop_level=False),
         ))
         self.errors[unconstrained_errs.index] = np.inf
-        self.params = pd.DataFrame(self.model).unstack().dropna()
+        self.model = pd.DataFrame(self._model_dict).unstack().dropna()
+        del self._model_dict
         # self.params = to_pandas(self.model).rename('model')
 
     def get_spirals(self):

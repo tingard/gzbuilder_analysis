@@ -1,11 +1,14 @@
+import re
 from copy import deepcopy
 from functools import reduce
 import pandas as pd
 import jax.numpy as np
-from jax import jit
-from ..rendering.jax.sersic import sersic, sersic_ltot, sersic_I
+from ..rendering.sersic import sersic_ltot, sersic_I
+from ..rendering.spiral import spiral_arm
+from ..rendering import get_spirals
 from gzbuilder_analysis.config import COMPONENT_PARAM_BOUNDS
-from .misc import df_to_dict
+from gzbuilder_analysis import df_to_dict
+
 
 EMPTY_SERSIC = pd.Series(
     dict(mux=np.nan, muy=np.nan, Re=0.5, roll=0, q=1, I=0, n=1, c=2)
@@ -15,24 +18,38 @@ EMPTY_SERSIC_ERR = pd.Series(
 )
 
 
-@jit
-def get_fraction(comp_l, disk_l):
-    return comp_l / (disk_l + comp_l)
-
-
 def get_centre(model):
     centre_mux = np.nanmean(np.array([
         model.get(k, {}).get('mux', np.nan) for k in ('bulge', 'bar')
-        if model.get(k, False)
+        if model.get(k, None) is not None
     ]))
     centre_muy = np.nanmean(np.array([
         model.get(k, {}).get('muy', np.nan) for k in ('bulge', 'bar')
-        if model.get(k, False)
+        if model.get(k, None) is not None
     ]))
     return dict(mux=float(centre_mux), muy=float(centre_muy))
 
 
-def to_reparametrization(model):
+# disk_spiral_L = (
+#     final_model[('disk', 'L')]
+#     + (comps['spiral'].sum() if 'spiral' in comps else 0)
+# )
+# # fractions were originally parametrized vs the disk and spirals (bulge
+# # had no knowledge of bar and vice versa)
+# bulge_frac = final_model.get(('bulge', 'frac'), 0)
+# bar_frac = final_model.get(('bar', 'frac'), 0)
+#
+# bulge_L = bulge_frac * disk_spiral_L / (1 - bulge_frac)
+# bar_L = bar_frac * disk_spiral_L / (1 - bar_frac)
+# gal_L = disk_spiral_L + bulge_L + bar_L
+#
+# bulge_frac = bulge_L / (disk_spiral_L + bulge_L + bar_L)
+# bar_frac = bar_L / (disk_spiral_L + bulge_L + bar_L)
+#
+# deparametrized_model = from_reparametrization(final_model, o)
+
+
+def to_reparametrization(model, image_size):
     """Reparametrize a Galaxy Builder model to the parametrization used for
     fitting
 
@@ -45,42 +62,82 @@ def to_reparametrization(model):
     - Change the bulge and bar half-light intensity I to be the luminosity
       relative to the disk (named frac)
     """
-    return {k: v for k, v in dict(
+    n_arms = sum(1 for i in model['spiral'].index if 'I.' in i)
+    has_bulge = model.get('bulge', None) is not None
+    has_bar = model.get('bar', None) is not None
+
+    disk_L = float(sersic_ltot(
+        model['disk']['I'],
+        model['disk']['Re'],
+        model['disk']['q'],
+        n=1, c=2,
+    ))
+    bulge_L = float(sersic_ltot(
+        model['bulge']['I'],
+        model['bulge']['Re'],
+        model['bulge']['q'],
+        n=model['bulge']['n'],
+        c=2
+    )) if has_bulge else 0
+    bar_L = float(sersic_ltot(
+        model['bar']['I'],
+        model['bar']['Re'],
+        model['bar']['q'],
+        model['bar']['n'],
+        model['bar']['c']
+    )) if has_bar else 0
+    spiral_points = get_spirals(model.to_dict(), 2, model[('disk', 'roll')])
+    spiral_params = (
+        {
+            re.sub(r'\.[0-9]+', '', k): v
+            for k, v in model['spiral'].items()
+            if '.{}'.format(i) in k
+        }
+        for i in range(n_arms)
+    )
+    spiral_L = sum(
+        spiral_arm(
+            arm_points=points,
+            params=params,
+            disk=model['disk'],
+            image_size=image_size,
+        ).sum()
+        for points, params in zip(spiral_points, spiral_params)
+    )
+    total_L = disk_L + spiral_L + bulge_L + bar_L
+    bulge_frac = bulge_L / total_L
+    bar_frac = bar_L / total_L
+    return pd.DataFrame(dict(
         disk=dict(
             mux=model['disk']['mux'],
             muy=model['disk']['muy'],
             q=model['disk']['q'],
             roll=model['disk']['roll'],
             Re=model['disk']['Re'],
-            L=float(sersic_ltot(
-                model['disk']['I'],
-                model['disk']['Re'],
-                model['disk']['q'],
-                1.0, 2.0
-            )),
+            L=disk_L,
         ),
         bulge=dict(
             q=model['bulge']['q'],
             roll=model['bulge']['roll'],
             scale=model['bulge']['Re'] / model['disk']['Re'],
-            frac=0.05,
+            frac=bulge_frac,
             n=model['bulge']['n'],
-        ) if bool(model['bulge']) else None,
+        ) if has_bulge else None,
         bar=dict(
             q=model['bar']['q'],
             roll=model['bar']['roll'],
             scale=model['bar']['Re'] / model['disk']['Re'],
-            frac=0.1,
+            frac=bar_frac,
             n=model['bar']['n'],
             c=model['bar']['c']
-        ) if bool(model['bar']) else None,
+        ) if has_bar else None,
         centre=(
             get_centre(model)
-            if bool(model['bulge']) or bool(model['bar'])
+            if has_bulge or has_bar
             else None
         ),
         spiral=deepcopy(model['spiral'])
-    ).items() if v is not None}
+    )).unstack().dropna()
 
 
 def from_reparametrization(model, optimizer):
@@ -141,13 +198,13 @@ def from_reparametrization(model, optimizer):
 
 
 def get_reparametrized_errors(agg_res):
-    disk = agg_res.params['disk']
-    if 'bulge' in agg_res.params:
-        bulge = agg_res.params['bulge']
+    disk = agg_res.model['disk']
+    if 'bulge' in agg_res.model:
+        bulge = agg_res.model['bulge']
     else:
         bulge = EMPTY_SERSIC
-    if 'bar' in agg_res.params:
-        bar = agg_res.params['bar']
+    if 'bar' in agg_res.model:
+        bar = agg_res.model['bar']
     else:
         bar = EMPTY_SERSIC
 

@@ -3,45 +3,8 @@ import jax.numpy as np
 from jax import jit
 from jax.lax import conv
 import pandas as pd
-from gzbuilder_analysis.rendering.jax.spiral import correct_logsp_params
-
-
-def df_to_dict(df):
-    """Quickly convert a DataFrame to a dictionary, removing any NaNs
-    """
-    return {k: v[v.notna()].to_dict() for k, v in df.items()}
-
-
-def _make_xy_arrays(shape, On):
-    x = np.arange(shape[1], dtype=np.float64)
-    y = np.arange(shape[0], dtype=np.float64)
-    cx, cy = np.meshgrid(x, y)
-    x_super = np.linspace(0.5 / On - 0.5, shape[1] - 0.5 - 0.5 / On,
-                          shape[1] * On)
-    y_super = np.linspace(0.5 / On - 0.5, shape[0] - 0.5 - 0.5 / On,
-                          shape[0] * On)
-    cx_super, cy_super = np.meshgrid(x_super, y_super)
-    return (cx, cy), (cx_super, cy_super)
-
-
-def downsample(arr, n=5):
-    """downsample an array of (n*x, m*y, m) into (x, y, m) using the mean
-    """
-    shape = (np.asarray(arr.shape) / n).astype(int)
-    return arr.reshape(shape[0], n, shape[1], n, -1).mean(3).mean(1)
-
-
-downsample = jit(downsample, static_argnums=(1,))
-
-
-@jit
-def psf_conv(arr, psf):
-    return conv(
-        arr.reshape(1, 1, *arr.shape),
-        psf.reshape(1, 1, *psf.shape),
-        (1, 1),
-        'SAME'
-    )[0, 0]
+from gzbuilder_analysis.rendering.spiral import correct_logsp_params
+from gzbuilder_analysis import df_to_dict
 
 
 def get_luminosity_keys(model):
@@ -180,3 +143,17 @@ def correct_axratio(model):
                 })
                 model_.update(new_spiral)
     return model_
+
+
+def GZB_score(D):
+    """Recreate the score shown to volunteers from an (unscaled) difference
+    image
+    """
+    N = np.multiply.reduce(D.shape)
+    return 100 * np.exp(
+        -300 / N
+        * np.sum(
+            asinh(np.abs(D) / 0.6)**2
+            / asinh(0.6)
+        )
+    )
