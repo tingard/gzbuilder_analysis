@@ -2,11 +2,10 @@ from copy import deepcopy
 import pandas as pd
 import jax.numpy as np
 from jax import jit, jacrev
-from .misc import _make_xy_arrays, downsample, psf_conv
 from .nnlf import negative_log_likelihood
-from .reparametrization import to_reparametrization, \
+from ..parsing.reparametrization import to_reparametrization, \
     get_reparametrized_errors, get_limits
-from ..rendering.jax.renderer import render_comps
+from ..rendering.renderer import psf_conv, render_comps
 
 
 def __get_nnlf(
@@ -74,9 +73,8 @@ class Optimizer():
                  oversample_n=5):
         self.aggregation_result = aggregation_result
         # reparametrize the model
-        self.model = pd.DataFrame(
-            to_reparametrization(aggregation_result.model)
-        ).unstack().dropna()
+        self.model = to_reparametrization(aggregation_result.model, galaxy_data.shape)
+
         # save this as a dictionary (for fitting)
         self.model_ = self.model.to_dict()
 

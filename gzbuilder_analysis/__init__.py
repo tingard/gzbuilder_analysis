@@ -2,7 +2,12 @@ import os
 import re
 import pandas as pd
 from tqdm import tqdm
-from .aggregation.__aggregation_result import AggregationResult
+
+
+def df_to_dict(df):
+    """Quickly convert a DataFrame to a dictionary, removing any NaNs
+    """
+    return {k: v[v.notna()].to_dict() for k, v in df.items()}
 
 
 def load_aggregation_results(path='output_files/aggregation_results'):
@@ -35,3 +40,7 @@ def load_fit_results(path='output_files/tuning_results', include_bad=False):
                 if fit_result['res']['success'] or include_bad:
                     fit_models[int(f.split('.')[0])] = fit_result
     return fit_models.apply(pd.Series)
+
+
+def to_catalog(fit_results, fitting_metadata):
+    pass

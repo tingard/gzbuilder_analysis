@@ -10,6 +10,18 @@ from .__sanitize import sanitize_model
 from .__pandas import to_pandas, from_pandas
 
 
+
+def __apply_to_spiral_param(func, key, spirals):
+    key_ = lambda i: '{}.{}'.format(key, i)
+    return {
+        **spirals,
+        **{
+            key_(i): func(spirals[key_(i)])
+            for i in range(spirals['n_arms'])
+        }
+    }
+
+
 def __has_drawn_component(comp):
     return len(comp['value'][0]['value']) > 0
 
@@ -67,22 +79,23 @@ def parse_bar_comp(comp, *args, **kwargs):
 
 
 def parse_spiral_comp(comp, image_size, size_diff=1, **kwargs):
-    out = []
-    for arm in comp['value'][0]['value']:
-        points = np.array(
-            [
-                [p['x'], image_size[1] - p['y']]
-                for p in arm['points']
-            ],
-            dtype='float'
-        )
-        params = {
+    out = {}
+    i = -1
+    for i, arm in enumerate(comp['value'][0]['value']):
+        out.update({
             # correct for 0.8 multiplier in original rendering code
-            'I': float(arm['details'][0]['value']) / 0.8,
-            'spread': float(arm['details'][1]['value'] or 0.5) * size_diff,
-            'falloff': max(float(comp['value'][1]['value'] or 1), 1E-5),
-        }
-        out.append((points, params))
+            'I.{}'.format(i): float(arm['details'][0]['value']) / 0.8,
+            'spread.{}'.format(i): float(arm['details'][1]['value'] or 0.5) * size_diff,
+            'falloff.{}'.format(i): max(float(comp['value'][1]['value'] or 1), 1E-5),
+            'points.{}'.format(i): np.array(
+                [
+                    [p['x'], image_size[1] - p['y']]
+                    for p in arm['points']
+                ],
+                dtype='float'
+            )
+        })
+    out['n_arms'] = i + 1
     return out
 
 
@@ -129,13 +142,17 @@ def scale_model(model, scale):
             model_out[comp]['mux'] *= scale
             model_out[comp]['muy'] *= scale
             model_out[comp]['Re'] *= scale
-        model_out['spiral'] = [
-            [
-                points * scale,
-                {**params, 'spread': params.get('spread', np.nan) * scale}
-            ]
-            for points, params in model['spiral']
-        ]
+    model_out['spiral'] = {
+        **model_out['spiral'],
+        **{
+            'spread.{}'.format(i): model_out['spiral'].get('spread.{}'.format(i), np.nan) * scale
+            for i in range(model_out['spiral']['n_arms'])
+        },
+        **{
+            'points.{}'.format(i): model_out['spiral']['points.{}'.format(i)] * scale
+            for i in range(model_out['spiral']['n_arms'])
+        },
+    }
     return model_out
 
 
@@ -150,11 +167,10 @@ def rotate_model_about_centre(model, image_size, rotation):
         if model[comp] is None:
             new_model[comp] = None
         elif comp == 'spiral':
-            new_spirals = [
-                ((np.dot(rot_mx, (points - crpos).T).T + crpos), deepcopy(params))
-                for points, params in model[comp]
-            ]
-            new_model[comp] = new_spirals
+            new_model[comp] = __apply_to_spiral_param(
+                lambda s: np.dot(rot_mx, (s - crpos).T).T + crpos,
+                'points', model[comp]
+            )
         else:
             new_model[comp] = deepcopy(model[comp])
             p = np.array((new_model[comp]['mux'], new_model[comp]['muy']))
@@ -189,3 +205,7 @@ def unmake_json(f):
         **model,
         'spiral': [(np.array(points), params) for points, params in model['spiral']]
     }
+
+
+def get_n_arms(model):
+    return len()

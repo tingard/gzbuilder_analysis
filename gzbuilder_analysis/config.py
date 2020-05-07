@@ -89,6 +89,7 @@ COMPONENT_PARAM_BOUNDS = {
         'spread': [0.5, 15],
         't_min': [-np.inf, np.inf],
         't_max': [-np.inf, np.inf],
+        'n_arms': [0, np.inf],
     },
     'centre': {
         'mux': [-np.inf, np.inf],

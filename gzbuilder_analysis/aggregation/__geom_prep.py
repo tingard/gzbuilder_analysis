@@ -20,7 +20,7 @@ def remove_scaling(annotation):
 
 
 def make_ellipse(comp):
-    if not comp:
+    if comp is None:
         return None
     return shapely_rotate(
         shapely_scale(
@@ -34,7 +34,7 @@ def make_ellipse(comp):
 
 
 def make_box(comp):
-    if not comp:
+    if comp is None:
         return None
     return shapely_rotate(
         box(
@@ -72,22 +72,3 @@ def ellipse_from_param_list(p):
 
 def box_from_param_list(p):
     return make_box(get_param_dict(p))
-
-
-def get_drawn_arms(models, clean=True, image_size=None):
-    """Given classifications for a galaxy, get the non-self-overlapping with
-    more then five points drawn spirals arms
-    """
-    arms = np.array([
-        points
-        for model in models.values
-        for points, params in model['spiral']
-        if clean and (len(points) > 5 and LineString(arm).is_simple)
-    ])
-    if image_size is not None:
-        # reverse the y-axis
-        return np.array([
-            (1, -1) * (arm - (0, image_size[0]))
-            for arm in arms
-        ])
-    return arms
