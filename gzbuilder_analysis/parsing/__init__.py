@@ -10,14 +10,13 @@ from .__sanitize import sanitize_model
 from .__pandas import to_pandas, from_pandas
 
 
-
 def __apply_to_spiral_param(func, key, spirals):
     key_ = lambda i: '{}.{}'.format(key, i)
     return {
         **spirals,
         **{
             key_(i): func(spirals[key_(i)])
-            for i in range(spirals['n_arms'])
+            for i in range(spirals.get('n_arms', 0))
         }
     }
 
@@ -100,7 +99,7 @@ def parse_spiral_comp(comp, image_size, size_diff=1, **kwargs):
 
 
 def parse_annotation(annotation, image_size, **kwargs):
-    model = {'disk': None, 'bulge': None, 'bar': None, 'spiral': []}
+    model = {'disk': None, 'bulge': None, 'bar': None, 'spiral': {}}
     for component in annotation:
         if len(component['value'][0]['value']) == 0:
             # component['task'] = None
@@ -142,15 +141,16 @@ def scale_model(model, scale):
             model_out[comp]['mux'] *= scale
             model_out[comp]['muy'] *= scale
             model_out[comp]['Re'] *= scale
+
     model_out['spiral'] = {
         **model_out['spiral'],
         **{
             'spread.{}'.format(i): model_out['spiral'].get('spread.{}'.format(i), np.nan) * scale
-            for i in range(model_out['spiral']['n_arms'])
+            for i in range(model['spiral'].get('n_arms', 0))
         },
         **{
             'points.{}'.format(i): model_out['spiral']['points.{}'.format(i)] * scale
-            for i in range(model_out['spiral']['n_arms'])
+            for i in range(model['spiral'].get('n_arms', 0))
         },
     }
     return model_out

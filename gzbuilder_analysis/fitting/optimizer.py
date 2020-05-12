@@ -73,7 +73,11 @@ class Optimizer():
                  oversample_n=5):
         self.aggregation_result = aggregation_result
         # reparametrize the model
-        self.model = to_reparametrization(aggregation_result.model, galaxy_data.shape)
+        if isinstance(aggregation_result.model, dict):
+            # using an old version of AggregationResult
+            self.model = to_reparametrization(aggregation_result.params, galaxy_data.shape)
+        else:
+            self.model = to_reparametrization(aggregation_result.model, galaxy_data.shape)
 
         # save this as a dictionary (for fitting)
         self.model_ = self.model.to_dict()

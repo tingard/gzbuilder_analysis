@@ -62,7 +62,10 @@ def to_reparametrization(model, image_size):
     - Change the bulge and bar half-light intensity I to be the luminosity
       relative to the disk (named frac)
     """
-    n_arms = sum(1 for i in model['spiral'].index if 'I.' in i)
+    try:
+        n_arms = sum(1 for i in model['spiral'].index if 'I.' in i)
+    except KeyError:
+        n_arms = 0
     has_bulge = model.get('bulge', None) is not None
     has_bar = model.get('bar', None) is not None
 
@@ -86,7 +89,7 @@ def to_reparametrization(model, image_size):
         model['bar']['n'],
         model['bar']['c']
     )) if has_bar else 0
-    spiral_points = get_spirals(model.to_dict(), 2, model[('disk', 'roll')])
+    spiral_points = get_spirals(model.to_dict(), n_arms, model[('disk', 'roll')])
     spiral_params = (
         {
             re.sub(r'\.[0-9]+', '', k): v
@@ -136,7 +139,7 @@ def to_reparametrization(model, image_size):
             if has_bulge or has_bar
             else None
         ),
-        spiral=deepcopy(model['spiral'])
+        spiral=deepcopy(model['spiral']) if n_arms > 0 else {}
     )).unstack().dropna()
 
 
@@ -198,13 +201,18 @@ def from_reparametrization(model, optimizer):
 
 
 def get_reparametrized_errors(agg_res):
-    disk = agg_res.model['disk']
-    if 'bulge' in agg_res.model:
-        bulge = agg_res.model['bulge']
+    if isinstance(agg_res.model, dict):
+        model = agg_res.params
+    else:
+        model = agg_res.model
+
+    disk = model['disk']
+    if 'bulge' in model:
+        bulge = model['bulge']
     else:
         bulge = EMPTY_SERSIC
-    if 'bar' in agg_res.model:
-        bar = agg_res.model['bar']
+    if 'bar' in model:
+        bar = model['bar']
     else:
         bar = EMPTY_SERSIC
 

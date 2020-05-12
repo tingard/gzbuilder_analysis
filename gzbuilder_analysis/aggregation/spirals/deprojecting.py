@@ -4,6 +4,9 @@ from skimage.util import crop
 
 
 def deproject_array(arr, angle=0, ba=1):
+    """Use scikit-image to deproject an image given an ellipticity and position
+    angle
+    """
     ba = min(ba, 1/ba)
     rotated_image = rotate(arr, angle)
     stretched_image = rescale(
@@ -36,12 +39,17 @@ def deproject_arm(arm, angle=0, ba=1):
 
 
 def reproject_arm(arm, angle=0, ba=1):
+    """Undo the deprojection of a spiral arm
+    """
     return deproject_arm(
         deproject_arm(arm, 0, 1/ba),
         -angle, 1
     )
 
+
 def change_wcs(points, wcs_in, wcs_out):
+    """Convert an poly-line from one WCS to another
+    """
     return wcs_out.all_world2pix(
         wcs_in.all_pix2world(points, 0),
         0

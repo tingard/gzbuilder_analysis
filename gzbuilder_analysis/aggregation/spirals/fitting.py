@@ -14,6 +14,12 @@ from gzbuilder_analysis.config import SPIRAL_BAYESIAN_RIDGE_PRIORS
 
 
 def unwrap(theta, r, groups):
+    """Unwrap grouped poly-lines, attempting to give points at the same radius
+    the same value of theta (not trivial).
+    This method calculates the separation between unwrapped lines, and attempts
+    to find the value of delta (in multiples of 2pi) that minimizes the
+    distance to the other unwrapped lines.
+    """
     out = theta.copy()
     dt = (np.arange(3) - 1) * 2 * np.pi
     r_scaling = 2 * np.pi / np.max(r)
@@ -38,6 +44,11 @@ def unwrap(theta, r, groups):
 
 def weighted_group_cross_val(pipeline, X, y, cv, groups, weights,
                              score=median_absolute_error, lower_better=True):
+    """Function that performs a weighted group K-Fold cross validation on data,
+    where `pipeline` is a scikit-learn estimator or Pipeline object, and cv is
+    a cross-validator.
+    """
+    # TODO: example usage
     scores = np.zeros(cv.get_n_splits(X, y, groups=groups))
     for i, (train, test) in enumerate(cv.split(X, y, groups=groups)):
         X_train, y_train = X[train], y[train]
@@ -104,6 +115,9 @@ def get_polynomial_pipeline(degree):
 
 # Swing amplification model (not using sklearn pipelines)
 def _swing_amplification_dydt(r, theta, b):
+    """EXPERIMENTAL: the swing-amplification spiral model for flat rotation
+    curves
+    """
     R = 2 * b * r
     s = np.sinh(R)
     return (
@@ -113,6 +127,9 @@ def _swing_amplification_dydt(r, theta, b):
 
 
 def fit_swing_amplified_spiral(theta, r):
+    """EXPERIMENTAL: fit a spiral model which assumes a flat rotation curve and
+    the swing amplification most amplified pitch angle prediction
+    """
     def f(p):
         # p = (b, r0)
         y = odeint(_swing_amplification_dydt, p[1], theta, args=(p[0],))[:, 0]

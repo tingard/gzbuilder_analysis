@@ -2,6 +2,9 @@ import numpy as np
 from multiprocessing import Pool
 from shapely.geometry import MultiPoint, LineString
 
+# TODO: clean this up (and switch to JAX?)
+
+
 # Want to get distance from a point (y) to a line connected by two vertices
 # (p1, p2) from stackoverflow.com/questions/849211/
 # Consider the line extending the segment, parameterized as v + t (w - v).
@@ -44,6 +47,8 @@ v_get_diff = np.vectorize(get_diff, signature='(a),(a,b,c)->()')
 
 
 def minimum_distance(a, b):
+    """Calculate the distance between two poly-lines
+    """
     # construct our tensor (allowing vectorization)
     # m{i, j, k, p}
     # i iterates over each point in a
