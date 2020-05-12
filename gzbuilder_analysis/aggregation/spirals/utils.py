@@ -5,6 +5,7 @@ from shapely.geometry import LineString
 
 
 def r_theta_from_xy(x, y, mux=0, muy=0):
+    # TODO: remove this from here, as is already in __init__.py
     return (
         np.sqrt((x - mux)**2 + (y - muy)**2),
         np.arctan2((y - muy), (x - mux))
@@ -12,6 +13,7 @@ def r_theta_from_xy(x, y, mux=0, muy=0):
 
 
 def xy_from_r_theta(r, theta, mux=0, muy=0):
+    # TODO: remove this from here, as is already in __init__.py
     return np.stack((mux + r * np.cos(theta), muy + r * np.sin(theta)))
 
 
@@ -19,6 +21,7 @@ def get_drawn_arms(models, min_n=5):
     """Extract the drawn spiral arms from a Series of models, removing
     self-intersecting lines and lines with fewer than min_n points
     """
+    # TODO: remove this from here, as is already in __init__.py
     tuples = [
         (i, j)
         for i in models.index
@@ -35,6 +38,7 @@ def get_drawn_arms(models, min_n=5):
 
 
 def split_arms_at_center(arms, image_size=512, threshold=10):
+    # TODO: remove this from here, as is already in __init__.py
     out = []
     for arm in arms:
         distances_from_centre = np.sqrt(np.add.reduce(
@@ -58,6 +62,7 @@ def split_arms_at_center(arms, image_size=512, threshold=10):
 
 
 def equalize_arm_length(arms, method=np.max):
+    # TODO: remove this from here, as is already in __init__.py
     u_new = np.linspace(0, 1, method([len(i) for i in arms]))
     return [
         np.array(splev(u_new, splprep(arm.T, s=0, k=1)[0])).T
@@ -66,6 +71,7 @@ def equalize_arm_length(arms, method=np.max):
 
 
 def weight_r_by_n_arms(R, groups):
+    # TODO: remove this from here, as is already in __init__.py
     radiuses = [R[groups == g] for g in np.unique(groups)]
 
     r_bins = np.linspace(np.min(R), np.max(R), 100)
@@ -81,6 +87,7 @@ def weight_r_by_n_arms(R, groups):
 
 
 def get_sample_weight(R, groups, bar_length=0):
+    # TODO: remove this from here, as is already in __init__.py
     w = np.ones(R.shape[0])
     # We increase the weights of arms where we have multiple overlapping drawn poly-lines,
     # and also with radius (to represent the decreasing uncertainty in theta)
@@ -92,6 +99,7 @@ def get_sample_weight(R, groups, bar_length=0):
 
 
 def get_pitch_angle(b, sigma_b):
+    # TODO: remove this from here, as is already in __init__.py
     # ch is true if spiral is clockwise
     pa = np.rad2deg(np.arctan(b))
     chirality = np.sign(pa)
@@ -100,6 +108,7 @@ def get_pitch_angle(b, sigma_b):
 
 
 def pa_from_r_theta(r, th):
+    # TODO: remove this from here, as is already in __init__.py
     return np.rad2deg(np.arctan(
         np.gradient(np.log(r), th)
     ))

@@ -40,7 +40,7 @@ def sanitize_model(params):
                             params[k0]['{}.{}'.format(k, i)],
                             *COMPONENT_PARAM_BOUNDS['spiral'][k]
                         )
-                        for i in range(params['spiral']['n_arms'])
+                        for i in range(params['spiral'].get('n_arms', 0))
                     }
                     for k in ('I', 'spread', 'falloff')
                 ])

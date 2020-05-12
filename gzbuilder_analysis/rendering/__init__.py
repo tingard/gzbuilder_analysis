@@ -42,11 +42,17 @@ def calculate_model(model, image_size=(256, 256), psf=None, oversample_n=5):
         image_size=image_size,
         oversample_n=oversample_n
     ) if model.get('bar', None) is not None else np.zeros(image_size)
-    n_arms = int(
-        model.get('spiral', {}).get('n_arms', 0)
-        if model.get('spiral', None) is not None
-        else 0
-    )
+    try:
+        n_arms = int(
+            model.get('spiral', {}).get('n_arms', 0)
+            if model.get('spiral', None) is not None
+            else 0
+        )
+    except AttributeError:
+        # off-chance that we have an old version of the model where spirals
+        # are a list of (points, params)
+        n_arms = len(model['spiral'])
+
     spiral_params = [
         {
             re.sub(r'\.[0-9]+', '', k): v
@@ -55,7 +61,9 @@ def calculate_model(model, image_size=(256, 256), psf=None, oversample_n=5):
         }
         for i in range(n_arms)
     ]
-    if any(re.match(r'points.[0-9]+', k) for k in model['spiral'].keys()):
+    if n_arms == 0:
+        spirals_arr = np.zeros_like(disk_arr)
+    elif any(re.match(r'points.[0-9]+', k) for k in model['spiral'].keys()):
         spirals_arr = sum(
             spiral_arm(
                 arm_points=model['spiral']['points.{}'.format(i)],

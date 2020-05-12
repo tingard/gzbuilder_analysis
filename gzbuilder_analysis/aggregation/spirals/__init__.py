@@ -4,10 +4,12 @@ from scipy.optimize import minimize
 from shapely.geometry import LineString
 from scipy.interpolate import splprep, splev, interp1d
 from scipy import integrate
-import json
 
 
 def r_theta_from_xy(x, y, mux=0, muy=0):
+    """Convert a set of xy pairs into polar coordinates, with an optional
+    centre point
+    """
     return (
         np.sqrt((x - mux)**2 + (y - muy)**2),
         np.arctan2((y - muy), (x - mux))
@@ -15,6 +17,9 @@ def r_theta_from_xy(x, y, mux=0, muy=0):
 
 
 def xy_from_r_theta(r, theta, mux=0, muy=0):
+    """Convert polar coordinates to cartesian coordinates, with an optional
+    centre point
+    """
     return np.stack((mux + r * np.cos(theta), muy + r * np.sin(theta)))
 
 
@@ -25,7 +30,7 @@ def get_drawn_arms(models, min_n=5):
     tuples = [
         (i, j)
         for i in models.index
-        for j in range(models.loc[i]['spiral']['n_arms'])
+        for j in range(models.loc[i]['spiral'].get('n_arms', 0))
     ]
     idx = pd.MultiIndex.from_tuples(tuples, names=['model_index', 'arm_index'])
     return pd.Series([
@@ -33,7 +38,7 @@ def get_drawn_arms(models, min_n=5):
         if len(m['spiral']['points.{}'.format(i)]) > min_n and LineString(m['spiral']['points.{}'.format(i)]).is_simple
         else np.nan
         for _,  m in models.iteritems()
-        for i in range(m['spiral']['n_arms'])
+        for i in range(m['spiral'].get('n_arms', 0))
     ], index=idx).dropna()
 
 
@@ -57,6 +62,9 @@ def get_drawn_arms_old(models, min_n=5):
 
 
 def split_arms_at_center(arms, image_size=512, threshold=10):
+    """Remove any points within some threshold of the centre of an image, and
+    split arms that cross this region
+    """
     out = []
     for arm in arms:
         distances_from_centre = np.sqrt(np.add.reduce(
@@ -80,6 +88,9 @@ def split_arms_at_center(arms, image_size=512, threshold=10):
 
 
 def equalize_arm_length(arms, method=np.max):
+    """Resample a set of poly-lines to all have the same length (determined by
+    method)
+    """
     u_new = np.linspace(0, 1, method([len(i) for i in arms]))
     return [
         np.array(splev(u_new, splprep(arm.T, s=0, k=1)[0])).T
@@ -88,6 +99,10 @@ def equalize_arm_length(arms, method=np.max):
 
 
 def weight_r_by_n_arms(R, groups):
+    """Create a weight function that assigns more weight to points at radii
+    with more points (weight is proportional to number of points at a similar
+    radius)
+    """
     radiuses = [R[groups == g] for g in np.unique(groups)]
 
     r_bins = np.linspace(np.min(R), np.max(R), 100)
@@ -103,9 +118,12 @@ def weight_r_by_n_arms(R, groups):
 
 
 def get_sample_weight(R, groups, bar_length=0):
+    """Get galaxy builder sample weight.
+    We increase the weights of arms where we have multiple overlapping drawn
+    poly-lines, and also with radius (to represent the decreasing uncertainty
+    in theta)
+    """
     w = np.ones(R.shape[0])
-    # We increase the weights of arms where we have multiple overlapping drawn poly-lines,
-    # and also with radius (to represent the decreasing uncertainty in theta)
     w *= R**2
     w *= weight_r_by_n_arms(R, groups)(R)
     w[R < bar_length] = 0
@@ -114,7 +132,9 @@ def get_sample_weight(R, groups, bar_length=0):
 
 
 def get_pitch_angle(b, sigma_b):
-    # ch is true if spiral is clockwise
+    """Get a pitch angle and error from logarithmic spiral fit parameters
+    """
+    # chirality is True if spiral is clockwise
     pa = np.rad2deg(np.arctan(b))
     chirality = np.sign(pa)
     sigma_pa = np.rad2deg(np.sqrt(sigma_b**2 / (b**2 + 1)**2))
@@ -122,6 +142,8 @@ def get_pitch_angle(b, sigma_b):
 
 
 def theta_from_pa(r, pa, C=0, return_err=False, **kwargs):
+    """EXPERIMENTAL: given pitch angle and radius, find theta
+    """
     # numerical integration of dt/dr = 1 / (r * tan(pa))
     assert np.all(pa > -90) and np.all(pa < 90)
     assert np.all(r > 0)
@@ -151,6 +173,9 @@ def theta_from_pa(r, pa, C=0, return_err=False, **kwargs):
 
 
 def fit_varying_pa(arm, r, pa):
+    """EXPERIMENTAL: Fits an arm of varying pitch angle to a set of polar
+    coordinates
+    """
     th = theta_from_pa(r, pa)
 
     def f(p):
@@ -166,12 +191,18 @@ def fit_varying_pa(arm, r, pa):
 
 
 def pa_from_r_theta(r, th):
+    """EXPERIMENTAL: Calculate a varying pitch angle from a set of polar
+    coordinates
+    """
     return np.rad2deg(np.arctan(
         np.gradient(np.log(r), th)
     ))
 
 
 def rot_matrix(a):
+    """Helper function for creating a rotation matrix given a rotation in
+    radians
+    """
     return np.array((
         (np.cos(a), np.sin(a)),
         (-np.sin(a), np.cos(a))
@@ -180,6 +211,9 @@ def rot_matrix(a):
 
 def inclined_log_spiral(t_min, t_max, A, phi, q=1, psi=0, dpsi=0, mux=0, muy=0,
                         N=200, **kwargs):
+    """Given a set of parameters, return an inclined logarithmic spiral in
+    cartesian coordinates
+    """
     theta = np.linspace(t_min, t_max, N)
     Rls = A * np.exp(np.tan(np.deg2rad(phi)) * theta)
     qmx = np.array(((q, 0), (0, 1)))
@@ -187,26 +221,3 @@ def inclined_log_spiral(t_min, t_max, A, phi, q=1, psi=0, dpsi=0, mux=0, muy=0,
     return (
         Rls * np.dot(mx, np.array((np.cos(theta), np.sin(theta))))
     ).T + np.array([mux, muy])
-
-# def deproject_drawn_arms(drawn_arms, phi, ba):
-#     """Correct for a galaxy's inclination by deprojecting its ellipticity back
-#     to a circle
-#     """
-#     pass
-#
-#
-# def split_arms_at_centre(drawn_arms, centre_size):
-#     """Split arms and remove points within a central radius
-#     """
-#     pass
-#
-#
-# def cluster_spirals(drawn_arms, image_size=(512, 512), centre_size=0.02):
-#     """Cluster an array of drawn arms and return the points in each cluster,
-#     splitting arms and removing points at the centre
-#     """
-#     pass
-#
-#
-# def fit_log_spirals(point_cloud, clean=True):
-#     pass
