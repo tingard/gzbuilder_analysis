@@ -22,7 +22,7 @@ from astropy.nddata.utils import Cutout2D
 from astropy import log
 import sep
 import montage_wrapper as montage
-import gzbuilder_analysis.data.sdss_psf as sdss_psf
+from .sdss_psf import sdss_psf_at_points
 
 
 LOCATION_QUERY_URL = 'http://skyserver.sdss.org/dr13/en/tools/search/x_results.aspx'
@@ -199,7 +199,7 @@ def get_frame_psf_at_points(frame, wcs, ra, dec):
     psfield = __download_psf(frame)
     bandnum = 'ugriz'.index('r') + 1
     hdu = psfield[bandnum]
-    return sdss_psf.sdss_psf_at_points(hdu, *coords[0])
+    return sdss_psf_at_points(hdu, *coords[0])
 
 
 def download_sdss_frames(frame_list, bands, silence=False, n_threads=4):

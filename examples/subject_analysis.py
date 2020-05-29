@@ -92,7 +92,7 @@ def do_subject(subject_id):
 
     fitting_metadata = download_json(locations['difference'].loc[subject_id]).apply(np.array)
     zoo_image = download_image(locations['image'].loc[subject_id])
-
+    print(zoo_image.shape)
     # create the stacked image from SDSS frames
     cutout_data, frame_data = get_sdss_cutout(pos['ra'], pos['dec'], cutout_radius=pos['Petrosian radius (degrees)'], bands=bands, return_frame_data=True)
 

@@ -7,7 +7,7 @@ from .fitsUtils import fits_table, table_fields
 
 # Returns (a, sigma1, b, sigma2)
 def sdss_dg_psf_params(psfield, band):
-    T = fu.fits_table(psfield[6].data)
+    T = fits_table(psfield[6].data)
     # the psf table has one row.
     assert(len(T)) == 1
     T = T[0]
@@ -53,7 +53,7 @@ def sdss_psf_at_points(hdu, x, y):
     x = np.atleast_1d(x)
     y = np.atleast_1d(y)
 
-    psf = fu.table_fields(hdu.data)
+    psf = table_fields(hdu.data)
 
     psfimgs = None
     (outh, outw) = (None, None)
