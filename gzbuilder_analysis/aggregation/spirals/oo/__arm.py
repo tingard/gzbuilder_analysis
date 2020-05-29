@@ -4,7 +4,7 @@ import pandas as pd
 from sklearn.metrics import median_absolute_error
 from sklearn.model_selection import GroupKFold
 from gzbuilder_analysis.aggregation.spirals import \
-    cleaning, deprojecting, fitting, utils
+    cleaning, deprojecting, fitting, utils, get_sample_weight
 
 
 class Arm():
