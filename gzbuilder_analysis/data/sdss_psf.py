@@ -1,10 +1,9 @@
 import sys
 # from numpy import *
 import numpy as np
-import sdssCutoutGrab.fitsUtils as fu
 from astropy.io import fits
 from scipy.ndimage.filters import gaussian_filter
-
+from .fitsUtils import fits_table, table_fields
 
 # Returns (a, sigma1, b, sigma2)
 def sdss_dg_psf_params(psfield, band):
