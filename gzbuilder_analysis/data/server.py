@@ -6,7 +6,7 @@ from flask import jsonify
 from gzbuilder_analysis.data import get_sdss_cutout
 
 # TODO: currently breaks after 1st request. Why?
-
+# TODO: Make use of the NumpyJSONEncoder
 
 def hello_http(request):
     """HTTP Cloud Function.

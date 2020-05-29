@@ -39,6 +39,7 @@ def grouped_local_outlier_factor(points, groups, **kwargs):
         clf.fit(X_train)
         # save whether each point in the arm is an outlier
         res[testField] = clf.predict(X_test) > 0
+    return res
 
 
 def clean_arms_xy(point_cloud, groups):

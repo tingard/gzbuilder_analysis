@@ -18,15 +18,15 @@ class AggregationResult(object):
             warn=False
         )
         self.input_models = models
-        self.aggregation_result = aggregate_components(
+        self._model_dict = aggregate_components(
             self.clusters,
             spiral_merging_distance=clustering_params['spiral']['merging_distance']
         )
-        self.phi = self.aggregation_result['disk']['roll']
-        self.ba = self.aggregation_result['disk']['q']
+        self.phi = self._model_dict['disk']['roll']
+        self.ba = self._model_dict['disk']['q']
         self.centre_pos = np.array((
-            self.aggregation_result['disk']['mux'],
-            self.aggregation_result['disk']['muy']
+            self._model_dict['disk']['mux'],
+            self._model_dict['disk']['muy']
         ))
         drawn_arms = get_drawn_arms(models, min_n=5)
         if len(drawn_arms) > 0:
@@ -40,7 +40,7 @@ class AggregationResult(object):
         else:
             self.spiral_pipeline = None
             self.spiral_arms = []
-        self._model_dict = aggregate_components(self.clusters)
+        # self._model_dict = aggregate_components(self.clusters)
         spirals = [
             (downsample(a.reprojected_log_spiral), DEFAULT_SPIRAL)
             for a in self.spiral_arms

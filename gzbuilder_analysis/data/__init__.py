@@ -1,7 +1,15 @@
+import os
+import time
 import warnings
 import bz2
+import shutil
 import requests
-from multiprocessing import Pool
+import tempfile
+from io import BytesIO
+import json
+from multiprocessing.pool import ThreadPool
+from functools import wraps
+from PIL import Image
 import numpy as np
 import pandas as pd
 from scipy.interpolate import interp2d
@@ -11,10 +19,10 @@ from astropy.nddata.utils import NoOverlapError
 import astropy.units as u
 from astropy.coordinates import SkyCoord
 from astropy.nddata.utils import Cutout2D
-from io import BytesIO
+from astropy import log
 import sep
+import montage_wrapper as montage
 import sdssCutoutGrab.sdss_psf as sdss_psf
-import json
 
 
 LOCATION_QUERY_URL = 'http://skyserver.sdss.org/dr13/en/tools/search/x_results.aspx'
@@ -56,8 +64,25 @@ DARKVAR_R = pd.Series(
     name='darkvar_r'
 )
 
+REQUEST_TIMEOUT = 2
 
-def get_frame_list(ra, dec, radius, limit=1000, verbose=False):
+
+def __download_retry_wrapper(func, n_retries=3):
+    @wraps(func)
+    def wrapper_func(*args, **kwargs):
+        _err = None
+        for i in range(n_retries):
+            try:
+                result = func(*args, **kwargs)
+                return result
+            except requests.exceptions.Timeout as err:
+                _err = err
+        raise(_err)
+    return wrapper_func
+
+
+@__download_retry_wrapper
+def get_frame_list(ra, dec, radius, limit=1000, silence=False, timeout=REQUEST_TIMEOUT):
     location_query_res = requests.get(
         LOCATION_QUERY_URL,
         params={
@@ -71,6 +96,7 @@ def get_frame_list(ra, dec, radius, limit=1000, verbose=False):
             'limit': limit,
             'format': 'json',
         },
+        timeout=timeout,
     )
     if location_query_res.status_code == 200:
         try:
@@ -85,12 +111,11 @@ def get_frame_list(ra, dec, radius, limit=1000, verbose=False):
                 .set_index('objid') \
                 .drop_duplicates(subset=['run', 'rerun', 'camcol', 'field'])
         except json.decoder.JSONDecodeError:
-            if verbose:
-                print(location_query_res.url)
-                print('Could not parse returned JSON: ' + location_query_res.url)
+            if not silence:
+                log.error('Could not parse returned JSON: ' + location_query_res.url)
             return []
-    elif verbose:
-        print('Could not connect to SDSS skyserver: ' + location_query_res.url)
+    elif not silence:
+        log.error('Could not connect to SDSS skyserver: ' + location_query_res.url)
     return []
 
 
@@ -109,12 +134,13 @@ def get_data_from_fits(f, band):
     gain = GAIN_TABLE.loc[img.header['camcol']][img.header['FILTER']]
     darkvar = DARKVAR_TABLE[band].loc[img.header['camcol']]
     nelec = dn * gain
-    return {'nelec': nelec, 'calib': calib_img, 'sky': sky_img,
+    return {'fits': f, 'nelec': nelec, 'calib': calib_img, 'sky': sky_img,
             'gain': gain, 'darkvar': darkvar, 'frame_wcs': WCS(f[0])}
 
 
-def __get_fits(url, verbose=True, bz2_decompress=True):
-    r = requests.get(url)
+@__download_retry_wrapper
+def __get_fits(url, silence=False, bz2_decompress=True, timeout=REQUEST_TIMEOUT):
+    r = requests.get(url, timeout=timeout)
     if r.status_code == 200:
         try:
             if bz2_decompress:
@@ -124,23 +150,48 @@ def __get_fits(url, verbose=True, bz2_decompress=True):
                 data = r.content
             return fits.open(BytesIO(data))
         except EOFError:
-            if verbose:
-                print('Could not download', url)
+            if not silence:
+                log.error('Could not download', url)
+    return None
 
 
-def __download_frame(band, frame, verbose=False):
+def __download_frame(band, frame, silence=False):
     url = FRAME_QUERY_URL.format(
         band=band,
         **frame[['run', 'rerun', 'camcol', 'field']].astype(int)
     )
-    return __get_fits(url, verbose=verbose, bz2_decompress=True)
+    return __get_fits(url, silence=silence, bz2_decompress=True)
 
 
-def __download_psf(frame, verbose=False):
+def __download_psf(frame, silence=False):
     url = PSF_QUERY_URL.format(
         **frame[['run', 'rerun', 'camcol', 'field']].astype(int)
     )
-    return __get_fits(url, verbose=verbose, bz2_decompress=False)
+    return __get_fits(url, silence=silence, bz2_decompress=False)
+
+
+@__download_retry_wrapper
+def download_json(url, timeout=REQUEST_TIMEOUT):
+    r = requests.get(url, timeout=timeout)
+    if r.status_code == 200:
+        return pd.Series(r.json())
+
+
+@__download_retry_wrapper
+def download_image(url, timeout=REQUEST_TIMEOUT):
+    buffer = tempfile.SpooledTemporaryFile(max_size=1e9)
+    r = requests.get(url, stream=True, timeout=timeout)
+    if r.status_code == 200:
+        downloaded = 0
+        filesize = int(r.headers['content-length'])
+        for chunk in r.iter_content():
+            downloaded += len(chunk)
+            buffer.write(chunk)
+
+        buffer.seek(0)
+        i = Image.open(BytesIO(buffer.read()))
+    buffer.close()
+    return i
 
 
 def get_frame_psf_at_points(frame, wcs, ra, dec):
@@ -151,19 +202,18 @@ def get_frame_psf_at_points(frame, wcs, ra, dec):
     return sdss_psf.sdss_psf_at_points(hdu, *coords[0])
 
 
-def download_sdss_frames(frame_list, bands, verbose=False):
+def download_sdss_frames(frame_list, bands, silence=False, n_threads=4):
     fits_to_stack = {k: [] for k in bands}
-    with Pool(4) as p:
-        keys = [(band, frame) for band in bands for frame in frame_list]
-        frame_data = p.starmap(
-            __download_frame,
-            [
-                (band, frame, verbose)
-                for band in bands
-                for objid, frame in frame_list.iterrows()
-            ]
-        )
-    for (band, _), data in zip(keys, frame_data):
+    with ThreadPool(n_threads) as p:
+        keys = [
+            (band, frame, silence)
+            for band in bands
+            for objid, frame in frame_list.iterrows()
+        ]
+        log.info('Downloading {} SDSS frames'.format(len(frame_list)))
+        frame_data = p.starmap(__download_frame, keys)
+
+    for (band, _, _), data in zip(keys, frame_data):
         if data is not None:
             fits_to_stack[band].append(
                 get_data_from_fits(
@@ -221,6 +271,38 @@ def extract_cutouts(input_frame_data, centre_pos, cutout_size):
     return frames
 
 
+def get_montage_cutout(frame_data, ra, dec, size, mosaic_directory='tmp__mosaic'):
+    centre_pos = SkyCoord(ra, dec, unit=u.degree, frame='fk5')
+    dx = 4 * float(size) * u.arcsec
+    dy = 4 * float(size) * u.arcsec
+    try:
+        shutil.rmtree(mosaic_directory)
+    except FileNotFoundError:
+        pass
+    with tempfile.TemporaryDirectory() as tmp_fits_dir:
+        # write fits data to temporary files for montage
+        [
+            [fits.append(os.path.join(tmp_fits_dir, f'out_{i}.fits'), hdu.data, hdu.header) for hdu in fd['fits']]
+            for i, fd in enumerate(frame_data['r'])
+        ]
+        # perform the mosaic
+        montage.mosaic(tmp_fits_dir, mosaic_directory, background_match=True)
+
+        # make a cutout of the desired region
+        montage_wcs = WCS(os.path.join(mosaic_directory, 'mosaic.fits'))
+        with fits.open(os.path.join(mosaic_directory, 'mosaic.fits')) as montage_result:
+            cutout = Cutout2D(
+                montage_result[0].data,
+                centre_pos,
+                (dx, dy),
+                wcs=montage_wcs,
+                mode='partial',
+                copy=True,
+            )
+
+    return cutout
+
+
 def stack_frames(frames):
     elec_stack = np.stack(frames['nelec'].values)
     calib_stack = np.stack(frames['calib'].values)
@@ -246,26 +328,27 @@ def stack_frames(frames):
     return I_combined, sigma_I
 
 
-def sourceExtractImage(data, bkgArr=None, sortType='center', verbose=False,
+def sourceExtractImage(data, bkgArr=None, sortType='center', silence=False,
                        **kwargs):
     """Extract sources from data array and return enumerated objects sorted
     smallest to largest, and the segmentation map provided by source extractor
     """
-    data = np.array(data).byteswap().newbyteorder()
+    if not silence:
+        log.info('Performing object detection using SourceExtractor')
     if bkgArr is None:
         bkgArr = np.zeros(data.shape)
-    o = sep.extract(data, kwargs.pop('threshold', 0.05), segmentation_map=True,
+    o = sep.extract(data.copy(), kwargs.pop('threshold', 0.05), segmentation_map=True,
                     **kwargs)
     if sortType == 'size':
-        if verbose:
-            print('Sorting extracted objects by radius from size')
+        if not silence:
+            log.info('Sorting extracted objects by radius from size')
         sizeSortedObjects = sorted(
             enumerate(o[0]), key=lambda src: src[1]['npix']
         )
         return sizeSortedObjects, o[1]
     elif sortType == 'center':
-        if verbose:
-            print('Sorting extracted objects by radius from center')
+        if not silence:
+            log.info('Sorting extracted objects by radius from center')
         centerSortedObjects = sorted(
             enumerate(o[0]),
             key=lambda src: (
@@ -277,18 +360,34 @@ def sourceExtractImage(data, bkgArr=None, sortType='center', verbose=False,
 
 
 def timer(func):
-    time = __import__('time')
+    @wraps(func)
     def wrapped_func(*args, **kwargs):
         t0 = time.time()
         res = func(*args, **kwargs)
         dt = time.time() - t0
-        print('Elapsed time: {:.2f}s'.format(dt))
+        log.info('Elapsed time: {:.2f}s'.format(dt))
         return res
     return wrapped_func
 
 
+def get_rotation_correction(montaged_image, zoo_image, zoo_mask):
+    target_im = np.ma.masked_array(zoo_image, zoo_mask)
+    loss = np.inf
+    for k in (0, 3):
+        d = montaged_image / montaged_image.max() - np.rot90(target_im, k=k)
+        loss_ = np.nansum(np.abs(d)) / d.size #+ np.sum(m)
+        if loss_ < loss:
+            rotation_correction = 2 * np.pi * k / 4
+            loss = loss_
+    return rotation_correction
+
+
 @timer
-def get_sdss_cutout(ra, dec, bands=['r'], cutout_radius=25, limit=1000, verbose=False):
+def get_sdss_cutout(
+    ra, dec,
+    bands=['r'], cutout_radius=25, limit=1000,
+    silence=False, return_frame_data=False
+):
     """EXPLAIN EVERYTHING PLZ
     """
     centre_pos = SkyCoord(
@@ -304,23 +403,22 @@ def get_sdss_cutout(ra, dec, bands=['r'], cutout_radius=25, limit=1000, verbose=
         ra, dec,
         radius=2 * cutout_radius / 60,
         limit=limit,
-        verbose=verbose
+        silence=silence
     )
 
     # download these frames and extract electron counts, calibration,
     # sky level, gain and darkvariance
-    input_frame_data = download_sdss_frames(frame_list, bands, verbose=verbose)
+    input_frame_data = download_sdss_frames(frame_list, bands, silence=silence)
     output = {}
     for band in bands:
         # cutout these images ready for stacking
-        cutout_data = extract_cutouts(input_frame_data['r'], centre_pos, cutout_size)
+        cutout_data = extract_cutouts(input_frame_data[band], centre_pos, cutout_size)
 
         # combine the frames into an image
         stacked_image, sigma_image = stack_frames(cutout_data)
 
-        # prevents astropy.io.fits reads things in a big-endian way, which makes
-        # MacOS sad
-        image_data = stacked_image.byteswap().newbyteorder()
+        # ensures native byte order
+        image_data = stacked_image.astype(np.float64)
 
         # source extract the image for masking
         objects, segmentation_map = sourceExtractImage(image_data)
@@ -335,14 +433,17 @@ def get_sdss_cutout(ra, dec, bands=['r'], cutout_radius=25, limit=1000, verbose=
             'data': np.ma.masked_array(stacked_image, mask),
             'sigma': np.ma.masked_array(sigma_image, mask),
             'psf': np.mean(psfs, axis=0),
+            'wcs': cutout_data['wcs'].iloc[0]
         }
+    if return_frame_data:
+        return output, input_frame_data
     return output
 
 
 if __name__ == '__main__':
     ra, dec = 135.033, 16.924
     cutout_radius = 25
-    cutout_result = get_sdss_cutout(ra, dec, cutout_radius=cutout_radius, bands=['r'], verbose=True)
+    cutout_result = get_sdss_cutout(ra, dec, cutout_radius=cutout_radius, bands=['r'], silence=False)
     print(cutout_result['r']['data'].shape)
     print(cutout_result['r']['psf'].shape)
     import matplotlib.pyplot as plt
