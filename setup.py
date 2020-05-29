@@ -20,5 +20,6 @@ setup(name='gzbuilder_analysis',
           'astropy',
           'requests',
           'Pillow',
+          'panoptes_client',
       ],
       zip_safe=False)

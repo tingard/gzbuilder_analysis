@@ -22,7 +22,7 @@ from astropy.nddata.utils import Cutout2D
 from astropy import log
 import sep
 import montage_wrapper as montage
-import .sdss_psf as sdss_psf
+import gzbuilder_analysis.data.sdss_psf as sdss_psf
 
 
 LOCATION_QUERY_URL = 'http://skyserver.sdss.org/dr13/en/tools/search/x_results.aspx'
@@ -282,7 +282,14 @@ def get_montage_cutout(frame_data, ra, dec, size, mosaic_directory='tmp__mosaic'
     with tempfile.TemporaryDirectory() as tmp_fits_dir:
         # write fits data to temporary files for montage
         [
-            [fits.append(os.path.join(tmp_fits_dir, f'out_{i}.fits'), hdu.data, hdu.header) for hdu in fd['fits']]
+            [
+                fits.append(
+                    os.path.join(tmp_fits_dir, 'out_{}.fits'.format(i)),
+                    hdu.data,
+                    hdu.header
+                )
+                for hdu in fd['fits']
+            ]
             for i, fd in enumerate(frame_data['r'])
         ]
         # perform the mosaic
