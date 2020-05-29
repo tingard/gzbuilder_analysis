@@ -3,6 +3,7 @@ import requests
 import json
 import re
 import tempfile
+from time import sleep
 from copy import deepcopy
 from io import BytesIO
 from getpass import getpass
@@ -11,6 +12,7 @@ from PIL import Image
 import numpy as np
 import pandas as pd
 import tqdm
+import matplotlib.pyplot as plt
 from scipy.optimize import minimize
 import montage_wrapper as montage
 import astropy.units as u
@@ -44,6 +46,7 @@ import warnings
 from astropy import log
 warnings.simplefilter('ignore', UserWarning)
 log.setLevel('ERROR')
+np.seterr(divide='ignore', invalid='ignore')
 
 # We need a Zooniverse classification and subject export
 try:
@@ -284,7 +287,7 @@ def do_subject(subject_id):
     plt.close()
 
     ###### Return complied value ######
-    return pd.Series(dict(
+    return dict(
         aggregation_result=aggregation_result,
         aggregate_errors=aggregation_result.errors,
         final_model=final_model,
@@ -298,193 +301,16 @@ def do_subject(subject_id):
         hessian_errors=errs,
         keys=o.keys,
         subject=subjects.loc[subject_id],
+        montage_wcs=montage_wcs,
+        target_wcs=target_wcs,
+        data=data,
+        sigma_image=cutout_data['r']['sigma'].astype(np.float64),
+        psf=cutout_data['r']['psf'].astype(np.float64),
     ))
 
 
-# def do_subject(subject_id):
-#     # get the galaxy position from its metadata
-#     pos = metadata.loc[subject_id][['ra', 'dec', 'Petrosian radius (degrees)']].astype(float)
-#
-#     fitting_metadata = download_json(locations['difference'].loc[subject_id]).apply(np.array)
-#     zoo_image = download_image(locations['image'].loc[subject_id])
-#
-#     # create the stacked image from SDSS frames
-#     cutout_data, frame_data = get_sdss_cutout(pos['ra'], pos['dec'], cutout_radius=pos['Petrosian radius (degrees)'], bands=bands, return_frame_data=True)
-#
-#     # due to complications during project design, we need to map from the uploaded image
-#     # (created using montage, which has a smoothing effect), to the properly stacked image here
-#     montage_cutout = get_montage_cutout(frame_data, pos['ra'], pos['dec'], pos['Petrosian radius (degrees)'])
-#     montage_wcs = montage_cutout.wcs
-#     # some images show a weird rotation, we account for this by calculating the optimal residual between the montaged result
-#     # and the image shown to volunteers
-#     rotation_correction = get_rotation_correction(montage_cutout.data, fitting_metadata['imageData'], fitting_metadata['mask'].astype(bool))
-#
-#     target_wcs = cutout_data[bands[0]]['wcs']
-#
-#     data = cutout_data['r']['data']
-#
-#     c = (classifications
-#         .query('subject_ids == {}'.format(subject_id))
-#         .sort_values(by='created_at')
-#         .head(30)
-#     )
-#
-#     size_diff = zoo_image.size[0] / data.shape[0]
-#     zoo_models = c.apply(
-#         pg.parse_classification,
-#         axis=1,
-#         image_size=np.array(zoo_image.size),
-#         size_diff=size_diff,
-#         ignore_scale=True  # ignore scale slider when aggregating
-#     )
-#     scaled_models = zoo_models.apply(
-#         pg.scale_model,
-#         args=(1/size_diff,),
-#     )
-#     rotated_models = scaled_models.apply(
-#         pg.rotate_model_about_centre,
-#         args=(
-#             data.shape[0],
-#             rotation_correction
-#         ),
-#     )
-#     models = rotated_models.apply(
-#         pg.reproject_model,
-#         wcs_in=montage_wcs, wcs_out=target_wcs
-#     )
-#
-#     sanitized_models = models.apply(pg.sanitize_model)
-#
-#     try:
-#         aggregation_result = ag.AggregationResult(sanitized_models, cutout_data['r']['data'])
-#     except TypeError:
-#         print('No disk cluster for {}'.format(subject_id))
-#
-#     # define two handy functions to read results back from the GPU for scipy's
-#     # LBFGS-b
-#     def __f(p, optimizer, keys):
-#         return np.array(optimizer(p, keys).block_until_ready(), dtype=np.float64)
-#
-#
-#     def __j(p, optimizer, keys):
-#         return np.array(optimizer.jac(p, keys).block_until_ready(), dtype=np.float64)
-#
-#
-#     def __bar_incrementer(bar):
-#         def f(*a, **k):
-#             bar.update(1)
-#         return f
-#
-#
-#     o = Optimizer(
-#         aggregation_result,
-#         cutout_data['r']['psf'].astype(np.float64),
-#         cutout_data['r']['data'].astype(np.float64),
-#         cutout_data['r']['sigma'].astype(np.float64),
-#         oversample_n=5
-#     )
-#
-#     # define the parameters controlling only the brightness of components, and
-#     # fit them first
-#     L_keys = get_luminosity_keys(o.model)
-#
-#     # perform the first fit
-#     with tqdm.tqdm(desc='Fitting brightness', leave=False) as bar:
-#         res = minimize(
-#             __f,
-#             np.array([o.model_[k] for k in L_keys]),
-#             jac=__j,
-#             args=(o, L_keys),
-#             callback=__bar_incrementer(bar),
-#             bounds=np.array([o.lims_[k] for k in L_keys]),
-#         )
-#
-#     # update the optimizer with the new parameters
-#     for k, v in zip(L_keys, res['x']):
-#         o[k] = v
-#
-#     # perform the full fit
-#     with tqdm.tqdm(desc='Fitting everything', leave=False) as bar:
-#         res_full = minimize(
-#             __f,
-#             np.array([o.model_[k] for k in o.keys]),
-#             jac=__j,
-#             args=(o, o.keys),
-#             callback=__bar_incrementer(bar),
-#             bounds=np.array([o.lims_[k0][k1] for k0, k1 in o.keys]),
-#             options=dict(maxiter=10000)
-#         )
-#
-#     final_model = pd.Series({
-#         **deepcopy(o.model_),
-#         **{k: v for k, v in zip(o.keys, res_full['x'])}
-#     })
-#
-#     # correct the parameters of spirals in this model for the new disk,
-#     # allowing rendering of the model without needing the rotation of the disk
-#     # before fitting
-#     final_model = correct_spirals(final_model, o.base_roll)
-#
-#     # fix component axis ratios (if > 1, flip major and minor axis)
-#     final_model = correct_axratio(final_model)
-#
-#     # remove components with zero brightness
-#     final_model = remove_zero_brightness_components(final_model)
-#
-#     # lower the indices of spirals where possible
-#     final_model = lower_spiral_indices(final_model)
-#
-#     comps = o.render_comps(final_model.to_dict(), correct_spirals=False)
-#
-#     d = ops.index_update(
-#         psf_conv(sum(comps.values()), o.psf) - o.target,
-#         o.mask,
-#         np.nan
-#     )
-#     chisq = float(np.sum((d[~o.mask] / o.sigma[~o.mask])**2) / (~o.mask).sum())
-#     disk_spiral_L = (
-#         final_model[('disk', 'L')]
-#         + (comps['spiral'].sum() if 'spiral' in comps else 0)
-#     )
-#     # fractions were originally parametrized vs the disk and spirals (bulge
-#     # had no knowledge of bar and vice versa)
-#     bulge_frac = final_model.get(('bulge', 'frac'), 0)
-#     bar_frac = final_model.get(('bar', 'frac'), 0)
-#
-#     bulge_L = bulge_frac * disk_spiral_L / (1 - bulge_frac)
-#     bar_L = bar_frac * disk_spiral_L / (1 - bar_frac)
-#     gal_L = disk_spiral_L + bulge_L + bar_L
-#
-#     bulge_frac = bulge_L / (disk_spiral_L + bulge_L + bar_L)
-#     bar_frac = bar_L / (disk_spiral_L + bulge_L + bar_L)
-#
-#     deparametrized_model = from_reparametrization(final_model, o)
-#
-#     ftol = 2.220446049250313e-09
-#
-#     # Also calculate Hessian-errors
-#     errs = np.sqrt(
-#         max(1, abs(res_full.fun))
-#         * ftol
-#         * np.diag(res_full.hess_inv.todense())
-#     )
-#
-#     return dict(
-#         aggregate_model=aggregation_result.model,
-#         aggregate_errors=aggregation_result.errors,
-#         final_model=final_model,
-#         deparametrized_model=deparametrized_model,
-#         res=res_full,
-#         chisq=chisq,
-#         comps=comps,
-#         r_band_luminosity=float(gal_L),
-#         bulge_frac=float(bulge_frac),
-#         bar_frac=float(bar_frac),
-#         hessian_errors=errs,
-#         keys=o.keys,
-#     )
-
 def main(overwrite=False):
+    os.makedirs('aggregation_results', exist_ok=True)
     os.makedirs('results', exist_ok=True)
     for subject_id in tqdm.tqdm(subjects.index, desc='iterating_over_subjects'):
         if not overwrite and os.path.exists('results/{}.pickle.gz'.format(subject_id)):
@@ -492,6 +318,8 @@ def main(overwrite=False):
             continue
         result = do_subject(subject_id)
         if result is not None:
+            agg_res = result.pop('aggregation_result', None)
+            pd.to_pickle(agg_res, 'aggregation_results/{}.pickle.gz'.format(subject_id))
             pd.to_pickle(result, 'results/{}.pickle.gz'.format(subject_id))
 
 

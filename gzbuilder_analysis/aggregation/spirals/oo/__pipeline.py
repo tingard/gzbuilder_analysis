@@ -23,7 +23,7 @@ class SpiralPipeline(object):
 
         self.drawn_arms = np.array(
             utils.split_arms_at_centre(
-                np.array(drawn_arms),
+                np.array([arm.astype(np.float64) for arm in drawn_arms]),
                 centre=self.centre_pos,
                 threshold=centre_threshold,
             )
@@ -31,6 +31,7 @@ class SpiralPipeline(object):
         self.phi = float(phi)
         self.ba = float(ba)
         self.bar_length = float(bar_length)
+
         self.scaled_arms = np.array([
             arm / self.image_size for arm in self.drawn_arms
         ])

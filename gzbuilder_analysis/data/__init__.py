@@ -64,10 +64,11 @@ DARKVAR_R = pd.Series(
     name='darkvar_r'
 )
 
-REQUEST_TIMEOUT = 2
+REQUEST_TIMEOUT = 5
+RETRY_COUNT = 50
 
 
-def __download_retry_wrapper(func, n_retries=3):
+def __download_retry_wrapper(func, n_retries=RETRY_COUNT):
     @wraps(func)
     def wrapper_func(*args, **kwargs):
         _err = None
