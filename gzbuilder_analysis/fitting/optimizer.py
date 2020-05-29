@@ -1,6 +1,6 @@
 from copy import deepcopy
 import pandas as pd
-import jax.numpy as np
+import jax.numpy as jnp
 from jax import jit, jacrev
 from .nnlf import negative_log_likelihood
 from ..parsing.reparametrization import to_reparametrization, \
@@ -50,15 +50,15 @@ def __get_nnlf(
     ) / sigma_image[~mask]
 
     # centre and scale the parameter errors, where the error is not inf
-    scaled_param_err = np.asarray([
+    scaled_param_err = jnp.asarray([
         (model[k] - base_model[k]) / model_err[k]
         for k in model.keys()
-        if np.isfinite(model_err[k])
+        if jnp.isfinite(model_err[k])
     ])
 
     # return the summed negative log likelihood for the data and the parameters
     return negative_log_likelihood(
-        np.concatenate((masked_normalised_render_err.ravel(), scaled_param_err))
+        jnp.concatenate((masked_normalised_render_err.ravel(), scaled_param_err))
     )
 
 
@@ -109,9 +109,9 @@ class Optimizer():
         self.psf = psf
         self.oversample_n = oversample_n
         self.n_spirals = len(self.aggregation_result.spiral_arms)
-        self.target = np.asarray(galaxy_data.data)
-        self.mask = np.asarray(galaxy_data.mask)
-        self.sigma = np.asarray(sigma_image.data)
+        self.target = jnp.asarray(galaxy_data.data)
+        self.mask = jnp.asarray(galaxy_data.mask)
+        self.sigma = jnp.asarray(sigma_image.data)
 
         # compile the objective and jacobian functions for speedy computation
         self.__call__ = jit(self.__call__, static_argnums=(1,))

@@ -1,5 +1,5 @@
 import re
-import jax.numpy as np
+import jax.numpy as jnp
 from jax import jit
 from jax.lax import conv
 from .sersic import sersic_I, sersic, oversampled_sersic_component
@@ -12,7 +12,7 @@ from .spiral import translate_spiral, \
 def asinh(px):
     """Inverse hyperbolic sine function
     """
-    return np.log(px + np.sqrt(1.0 + (px * px)))
+    return jnp.log(px + jnp.sqrt(1.0 + (px * px)))
 
 
 @jit
@@ -36,12 +36,12 @@ def calculate_model(model, image_size=(256, 256), psf=None, oversample_n=5):
         model['bulge'],
         image_size=image_size,
         oversample_n=oversample_n
-    ) if model.get('bulge', None) is not None else np.zeros(image_size)
+    ) if model.get('bulge', None) is not None else jnp.zeros(image_size)
     bar_arr = oversampled_sersic_component(
         model['bar'],
         image_size=image_size,
         oversample_n=oversample_n
-    ) if model.get('bar', None) is not None else np.zeros(image_size)
+    ) if model.get('bar', None) is not None else jnp.zeros(image_size)
     try:
         n_arms = int(
             model.get('spiral', {}).get('n_arms', 0)
@@ -62,7 +62,7 @@ def calculate_model(model, image_size=(256, 256), psf=None, oversample_n=5):
         for i in range(n_arms)
     ]
     if n_arms == 0:
-        spirals_arr = np.zeros_like(disk_arr)
+        spirals_arr = jnp.zeros_like(disk_arr)
     elif any(re.match(r'points.[0-9]+', k) for k in model['spiral'].keys()):
         spirals_arr = sum(
             spiral_arm(
@@ -94,21 +94,21 @@ def calculate_model(model, image_size=(256, 256), psf=None, oversample_n=5):
 # Faster, differentiable rendering using JAX
 
 def _make_xy_arrays(shape, On):
-    x = np.arange(shape[1], dtype=np.float64)
-    y = np.arange(shape[0], dtype=np.float64)
-    cx, cy = np.meshgrid(x, y)
-    x_super = np.linspace(0.5 / On - 0.5, shape[1] - 0.5 - 0.5 / On,
+    x = jnp.arange(shape[1], dtype=jnp.float64)
+    y = jnp.arange(shape[0], dtype=jnp.float64)
+    cx, cy = jnp.meshgrid(x, y)
+    x_super = jnp.linspace(0.5 / On - 0.5, shape[1] - 0.5 - 0.5 / On,
                           shape[1] * On)
-    y_super = np.linspace(0.5 / On - 0.5, shape[0] - 0.5 - 0.5 / On,
+    y_super = jnp.linspace(0.5 / On - 0.5, shape[0] - 0.5 - 0.5 / On,
                           shape[0] * On)
-    cx_super, cy_super = np.meshgrid(x_super, y_super)
+    cx_super, cy_super = jnp.meshgrid(x_super, y_super)
     return (cx, cy), (cx_super, cy_super)
 
 
 def downsample(arr, n=5):
     """downsample an array of (n*x, m*y, m) into (x, y, m) using the mean
     """
-    shape = (np.asarray(arr.shape) / n).astype(int)
+    shape = (jnp.asarray(arr.shape) / n).astype(int)
     return arr.reshape(shape[0], n, shape[1], n, -1).mean(3).mean(1)
 
 
@@ -136,7 +136,7 @@ def __get_spirals(model, n_spirals, base_roll):
                 model[('disk', 'q')],
                 model[('disk', 'roll')],
                 dpsi,
-                np.linspace(
+                jnp.linspace(
                     model[('spiral', 't_min.{}'.format(i))],
                     model[('spiral', 't_max.{}'.format(i))],
                     100
@@ -188,32 +188,32 @@ def __render_comps(model, has_bulge, has_bar, n_spirals, shape,
         c=2.0,
     )
 
-    out['disk'] = np.squeeze(downsample(disk_super, oversample_n))
+    out['disk'] = jnp.squeeze(downsample(disk_super, oversample_n))
 
     # next add spirals to the disk
     if n_spirals > 0:
         spirals = get_spirals(model, n_spirals, base_roll)
-        spiral_distances = np.stack([
+        spiral_distances = jnp.stack([
             vmap_polyline_distance(s, *P)
             for s in spirals
         ], axis=-1)
 
-        Is = np.array([
+        Is = jnp.array([
             model[('spiral', 'I.{}'.format(i))]
             for i in range(n_spirals)
         ])
-        spreads = np.array([
+        spreads = jnp.array([
             model[('spiral', 'spread.{}'.format(i))] for i in range(n_spirals)
         ])
-        spirals = np.sum(
+        spirals = jnp.sum(
             Is
-            * np.exp(-spiral_distances**2 / (2*spreads**2))
-            * np.expand_dims(out['disk'], -1),
+            * jnp.exp(-spiral_distances**2 / (2*spreads**2))
+            * jnp.expand_dims(out['disk'], -1),
             axis=-1
         )
         out['spiral'] = spirals
     else:
-        spirals = np.zeros(shape)
+        spirals = jnp.zeros(shape)
 
     # calculate the luminosity of the disk and spirals together (the bulge and
     # bar fractions are calculated relative to this)
@@ -241,7 +241,7 @@ def __render_comps(model, has_bulge, has_bar, n_spirals, shape,
             n=model[('bulge', 'n')],
             c=2.0
         )
-        out['bulge'] = np.squeeze(downsample(bulge_super, oversample_n))
+        out['bulge'] = jnp.squeeze(downsample(bulge_super, oversample_n))
 
     # if we have a bar, render it
     if has_bar:
@@ -265,7 +265,7 @@ def __render_comps(model, has_bulge, has_bar, n_spirals, shape,
             n=model[('bar', 'n')],
             c=model[('bar', 'c')],
         )
-        out['bar'] = np.squeeze(downsample(bar_super, oversample_n))
+        out['bar'] = jnp.squeeze(downsample(bar_super, oversample_n))
 
     # return the dictionary of rendered components
     return out

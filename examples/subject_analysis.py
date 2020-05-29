@@ -63,22 +63,23 @@ except FileNotFoundError:
 
     # Generate exports and parse into DataFrames:
     classification_export = proj.get_export('classifications', generate=False)
-    subject_export = proj.get_export('subjects', generate=False)
-
-    classifications = pd.DataFrame([i for i in classification_export.csv_dictreader()]).set_index('classification_id')
-    classifications.created_at = pd.to_datetime(classifications.created_at)
-    classifications.subject_ids = classifications.subject_ids.astype(int)
+    classifications = pd.DataFrame([i for i in classification_export.csv_dictreader()]) \
+        .set_index('classification_id')
+        .astype({'subject_ids': int, 'created_at': 'datetime64[s]'})
     # convert the index dtype from Object to int
     classifications.index = classifications.index.astype(int)
-
-    subjects = pd.DataFrame([i for i in subject_export.csv_dictreader()])
-    # restrict to galaxies after the beta
-    subjects = subjects.assign(subject_set_id=subjects.subject_set_id.astype(int)).query('subject_set_id >= 20561')
-    # make sure each subject only appears once
-    subjects = subjects.groupby('subject_id').apply(lambda a: a.iloc[-1]).set_index('subject_id')
-    subjects.index = subjects.index.astype(int)
-
     classifications.to_csv('galaxy-builder-classifications.csv')
+
+    subject_export = proj.get_export('subjects', generate=False)
+    subjects = pd.DataFrame([i for i in subject_export.csv_dictreader()]) \
+        .astype({'subject_set_id': int}) \
+        # restrict to galaxies after the beta, and not in the calibration set
+        .query('subject_set_id >= 20561 and subject_set_id != 80112') \
+        # make sure each subject only appears once
+        .groupby('subject_id') \
+        .apply(lambda a: a.iloc[-1]) \
+        .set_index('subject_id')
+    subjects.index = subjects.index.astype(int)
     subjects.to_csv('galaxy-builder-subjects.csv')
 
 metadata = subjects.pop('metadata').apply(json.loads).apply(pd.Series)
@@ -92,7 +93,7 @@ def do_subject(subject_id):
 
     fitting_metadata = download_json(locations['difference'].loc[subject_id]).apply(np.array)
     zoo_image = download_image(locations['image'].loc[subject_id])
-    print(zoo_image.shape)
+
     # create the stacked image from SDSS frames
     cutout_data, frame_data = get_sdss_cutout(pos['ra'], pos['dec'], cutout_radius=pos['Petrosian radius (degrees)'], bands=bands, return_frame_data=True)
 
@@ -144,7 +145,6 @@ def do_subject(subject_id):
         aggregation_result = ag.AggregationResult(sanitized_models, cutout_data['r']['data'])
     except TypeError:
         print('No disk cluster for {}'.format(subject_id))
-
 
     # define two handy functions to read results back from the GPU for scipy's
     # LBFGS-b
@@ -277,7 +277,8 @@ def main(overwrite=False):
             sleep(0.1)
             continue
         result = do_subject(subject_id)
-        pd.to_pickle(result, 'results/{}.pickle.gz'.format(subject_id))
+        if result is not None:
+            pd.to_pickle(result, 'results/{}.pickle.gz'.format(subject_id))
 
 
 if __name__ == '__main__':

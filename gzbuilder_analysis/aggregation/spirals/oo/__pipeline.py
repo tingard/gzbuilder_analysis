@@ -15,23 +15,24 @@ class SpiralPipeline(object):
         eps=SPIRAL_CLUSTERING_PARAMS['eps'],
         min_samples=SPIRAL_CLUSTERING_PARAMS['min_samples'],
     ):
-        self.drawn_arms = np.array(
-            utils.split_arms_at_center(
-                np.array(drawn_arms),
-                image_size=image_size[0],
-                threshold=centre_threshold,
-            )
-        )
-        self.image_size = np.asarray(image_size, dtype=float)
+        self.image_size = np.asarray(image_size, dtype=np.float64)
         if centre_pos is None:
             self.centre_pos = self.image_size / 2
         else:
             self.centre_pos = np.asarray(centre_pos, dtype=float)
+
+        self.drawn_arms = np.array(
+            utils.split_arms_at_centre(
+                np.array(drawn_arms),
+                centre=self.centre_pos,
+                threshold=centre_threshold,
+            )
+        )
         self.phi = float(phi)
         self.ba = float(ba)
         self.bar_length = float(bar_length)
         self.scaled_arms = np.array([
-            arm / image_size for arm in self.drawn_arms
+            arm / self.image_size for arm in self.drawn_arms
         ])
         self.distances = metric.calculate_distance_matrix_parallel(
             self.scaled_arms

@@ -61,7 +61,7 @@ def get_drawn_arms_old(models, min_n=5):
     ], index=idx).dropna()
 
 
-def split_arms_at_center(arms, image_size=512, threshold=10):
+def split_arms_at_centre(arms, image_size=512, threshold=10):
     """Remove any points within some threshold of the centre of an image, and
     split arms that cross this region
     """

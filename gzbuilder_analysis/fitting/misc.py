@@ -1,5 +1,5 @@
 import re
-import jax.numpy as np
+import jax.numpy as jnp
 from jax import jit
 from jax.lax import conv
 import pandas as pd
@@ -49,7 +49,7 @@ def correct_spirals(model, base_roll):
             model_['disk']['q'],
             model_['disk']['roll'],
             dpsi,
-            np.array((
+            jnp.array((
                 spirals['t_min.{}'.format(i)],
                 spirals['t_max.{}'.format(i)],
             )),
@@ -108,7 +108,7 @@ def correct_axratio(model):
                     * model[(comp, size_param)]
                 ),
                 (comp, 'roll'): (
-                    (model[(comp, 'roll')] + np.pi/2) % np.pi
+                    (model[(comp, 'roll')] + jnp.pi/2) % jnp.pi
                 ),
             }))
     if model[('disk', 'q')] > 1:
@@ -129,8 +129,8 @@ def correct_axratio(model):
                     model_[('spiral', 'phi.{}'.format(i))],
                     model_[('disk', 'q')],
                     model_[('disk', 'roll')],
-                    -np.pi / 2,
-                    np.array((
+                    -jnp.pi / 2,
+                    jnp.array((
                         model_[('spiral', 't_min.{}'.format(i))],
                         model_[('spiral', 't_max.{}'.format(i))],
                     ))
@@ -149,11 +149,11 @@ def GZB_score(D):
     """Recreate the score shown to volunteers from an (unscaled) difference
     image
     """
-    N = np.multiply.reduce(D.shape)
-    return 100 * np.exp(
+    N = jnp.multiply.reduce(D.shape)
+    return 100 * jnp.exp(
         -300 / N
-        * np.sum(
-            asinh(np.abs(D) / 0.6)**2
+        * jnp.sum(
+            asinh(jnp.abs(D) / 0.6)**2
             / asinh(0.6)
         )
     )

@@ -1,6 +1,6 @@
 import re
 import pandas as pd
-import jax.numpy as np
+import jax.numpy as jnp
 from jax import jit
 from jax.lax import conv
 from .sersic import sersic_I, sersic
@@ -62,7 +62,7 @@ class Renderer():
 
     def __call__(self, model, oversample_n=None, is_reparametrized=False):
         if not isinstance(model, pd.Series):
-            model = pd.DataFrame(model).unstack().dropna().astype(np.float64)
+            model = pd.DataFrame(model).unstack().dropna().astype(jnp.float64)
         if not self.check_model(model):
             raise InvalidModelError('Model specification was not valid')
         # convert to reparametrization

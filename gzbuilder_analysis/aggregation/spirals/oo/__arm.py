@@ -37,7 +37,7 @@ class Arm():
 
     def __get_deprojected_coordinates(self):
         self.deprojected_coords = deprojecting.deproject_arm(
-            (self.coords - self.centre_pos) / self.image_size[0],
+            (self.coords - self.centre_pos) / self.image_size,
             angle=self.phi, ba=self.ba,
         )
         self.R_all, self.t_all = utils.r_theta_from_xy(
@@ -59,7 +59,12 @@ class Arm():
             self.point_weights = np.ones_like(self.R)
 
     def __fit_logsp(self):
-        self.t_predict = np.linspace(min(self.t), max(self.t), 500)
+        # predict on the 1-99 percentile values of theta
+        self.t_predict = np.linspace(
+            np.percentile(self.t, 1),
+            np.percentile(self.t, 99),
+            500,
+        )
         self.logsp_model.fit(self.t.reshape(-1, 1), self.R,
                              bayesianridge__sample_weight=self.point_weights)
         if self.logsp_model.score(self.t.reshape(-1, 1), self.R,) < 0.2:
@@ -72,12 +77,12 @@ class Arm():
         self.polar_logsp = np.array((t_predict, R_predict))
 
         x, y = utils.xy_from_r_theta(R_predict, t_predict)
-        self.log_spiral = np.stack((x, y), axis=1) * self.image_size[0] + self.centre_pos
+        self.log_spiral = np.stack((x, y), axis=1) * self.image_size + self.centre_pos
         self.reprojected_log_spiral = deprojecting.reproject_arm(
             arm=np.stack((x, y), axis=1),
             angle=self.phi,
             ba=self.ba
-        ) * self.image_size[0] + self.centre_pos
+        ) * self.image_size + self.centre_pos
         self.length = np.sqrt(
             np.sum(
                 np.diff(self.reprojected_log_spiral, axis=0)**2,

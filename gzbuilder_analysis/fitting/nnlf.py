@@ -1,4 +1,4 @@
-import jax.numpy as np
+import jax.numpy as jnp
 from jax import jit
 
 
@@ -15,7 +15,7 @@ def negative_log_likelihood(x):
     """
     n = len(x)
     log_likelihood = (
-        -n / 2 * np.log(2*np.pi)
-        - 1 / 2 * np.sum(x**2)
+        -n / 2 * jnp.log(2*jnp.pi)
+        - 1 / 2 * jnp.sum(x**2)
     )
     return -log_likelihood

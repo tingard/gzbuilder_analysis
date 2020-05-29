@@ -37,12 +37,12 @@ def get_drawn_arms(models, min_n=5):
     ], index=idx).dropna()
 
 
-def split_arms_at_center(arms, image_size=512, threshold=10):
+def split_arms_at_centre(arms, centre=np.array((50., 50.)), threshold=10):
     # TODO: remove this from here, as is already in __init__.py
     out = []
     for arm in arms:
         distances_from_centre = np.sqrt(np.add.reduce(
-            (arm - [image_size / 2, image_size / 2])**2,
+            (arm - centre)**2,
             axis=1
         ))
         mask = distances_from_centre < threshold

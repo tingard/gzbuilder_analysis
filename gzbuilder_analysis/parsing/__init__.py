@@ -69,7 +69,7 @@ def parse_bar_comp(comp, *args, **kwargs):
     drawing = _comp['value'][0]['value'][0]
     drawing['rx'] = drawing['width']
     drawing['ry'] = drawing['height']
-    # get center position of box
+    # get centre position of box
     drawing['x'] = drawing['x'] + drawing['width'] / 2
     drawing['y'] = drawing['y'] + drawing['height'] / 2
     drawing['angle'] = -drawing['angle']

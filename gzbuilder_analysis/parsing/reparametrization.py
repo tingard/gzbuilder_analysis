@@ -2,7 +2,7 @@ import re
 from copy import deepcopy
 from functools import reduce
 import pandas as pd
-import jax.numpy as np
+import jax.numpy as jnp
 from ..rendering.sersic import sersic_ltot, sersic_I
 from ..rendering.spiral import spiral_arm
 from ..rendering import get_spirals
@@ -11,20 +11,20 @@ from gzbuilder_analysis import df_to_dict
 
 
 EMPTY_SERSIC = pd.Series(
-    dict(mux=np.nan, muy=np.nan, Re=0.5, roll=0, q=1, I=0, n=1, c=2)
+    dict(mux=jnp.nan, muy=jnp.nan, Re=0.5, roll=0, q=1, I=0, n=1, c=2)
 )
 EMPTY_SERSIC_ERR = pd.Series(
-    dict(mux=np.nan, muy=np.nan, Re=0.1, roll=0.01, q=0.01, I=0.01, n=0.01, c=0.01)
+    dict(mux=jnp.nan, muy=jnp.nan, Re=0.1, roll=0.01, q=0.01, I=0.01, n=0.01, c=0.01)
 )
 
 
 def get_centre(model):
-    centre_mux = np.nanmean(np.array([
-        model.get(k, {}).get('mux', np.nan) for k in ('bulge', 'bar')
+    centre_mux = jnp.nanmean(jnp.array([
+        model.get(k, {}).get('mux', jnp.nan) for k in ('bulge', 'bar')
         if model.get(k, None) is not None
     ]))
-    centre_muy = np.nanmean(np.array([
-        model.get(k, {}).get('muy', np.nan) for k in ('bulge', 'bar')
+    centre_muy = jnp.nanmean(jnp.array([
+        model.get(k, {}).get('muy', jnp.nan) for k in ('bulge', 'bar')
         if model.get(k, None) is not None
     ]))
     return dict(mux=float(centre_mux), muy=float(centre_muy))
@@ -157,7 +157,7 @@ def from_reparametrization(model, optimizer):
         model_[('disk', 'Re')],
         model_[('disk', 'q')],
     )
-    model_[('disk', 'L')] = np.nan
+    model_[('disk', 'L')] = jnp.nan
     if 'bulge' in model_:
         bulge_L = (
             model_[('bulge', 'frac')] * (disk_spiral_L)
@@ -174,7 +174,7 @@ def from_reparametrization(model, optimizer):
         model_[('bulge', 'muy')] = model_[('centre', 'muy')]
         model_[('bulge', 'Re')] = bulge_Re
         model_[('bulge', 'I')] = bulge_I
-        model_[[('bulge', 'scale'), ('bulge', 'frac')]] = np.nan
+        model_[[('bulge', 'scale'), ('bulge', 'frac')]] = jnp.nan
 
     if 'bar' in model_:
         bar_L = (
@@ -193,10 +193,10 @@ def from_reparametrization(model, optimizer):
         model_[('bar', 'muy')] = model_[('centre', 'muy')]
         model_[('bar', 'Re')] = bar_Re
         model_[('bar', 'I')] = bar_I
-        model_[[('bar', 'scale'), ('bar', 'frac')]] = np.nan
+        model_[[('bar', 'scale'), ('bar', 'frac')]] = jnp.nan
 
     if 'centre' in model:
-        model_['centre'] = np.nan
+        model_['centre'] = jnp.nan
     return model_.dropna().sort_index(level=0)
 
 
@@ -229,54 +229,54 @@ def get_reparametrized_errors(agg_res):
     errs = pd.DataFrame(
         [],
         columns=['disk', 'bulge', 'bar', 'spiral'],
-        dtype=np.float64
+        dtype=jnp.float64
     )
     errs['disk'] = disk_e.copy()
     # it is possible that we have zero error for ellipticity, which will
     # cause problems. Instead, fix it as a small value
 
     errs.loc['q', 'disk'] = max(0.001, errs.loc['q', 'disk'])
-    errs.loc['L', 'disk'] = np.inf
-    errs.loc['I', 'disk'] = np.nan
-    errs.loc['n', 'disk'] = np.nan
-    errs.loc['c', 'disk'] = np.nan
+    errs.loc['L', 'disk'] = jnp.inf
+    errs.loc['I', 'disk'] = jnp.nan
+    errs.loc['n', 'disk'] = jnp.nan
+    errs.loc['c', 'disk'] = jnp.nan
 
     errs['bulge'] = bulge_e.copy()
     errs.loc['q', 'bulge'] = max(0.001, errs.loc['q', 'bulge'])
-    errs.loc['scale', 'bulge'] = bulge.Re / disk.Re * np.sqrt(
+    errs.loc['scale', 'bulge'] = bulge.Re / disk.Re * jnp.sqrt(
         bulge_e.Re**2 / bulge.Re**2
         + disk_e.Re**2 / disk.Re**2
     )
-    errs.loc['frac', 'bulge'] = np.inf
-    errs.loc['I', 'bulge'] = np.nan
-    errs.loc['Re', 'bulge'] = np.nan
-    errs.loc['c', 'bulge'] = np.nan
+    errs.loc['frac', 'bulge'] = jnp.inf
+    errs.loc['I', 'bulge'] = jnp.nan
+    errs.loc['Re', 'bulge'] = jnp.nan
+    errs.loc['c', 'bulge'] = jnp.nan
 
     errs['bar'] = bar_e.copy()
     errs.loc['q', 'bar'] = max(0.001, errs.loc['q', 'bar'])
-    errs.loc['scale', 'bar'] = bar.Re / disk.Re * np.sqrt(
+    errs.loc['scale', 'bar'] = bar.Re / disk.Re * jnp.sqrt(
         bar_e.Re**2 / bar.Re**2
         + disk_e.Re**2 / disk.Re**2
     )
-    errs.loc['frac', 'bar'] = np.inf
-    errs.loc['I', 'bar'] = np.nan
-    errs.loc['Re', 'bar'] = np.nan
+    errs.loc['frac', 'bar'] = jnp.inf
+    errs.loc['I', 'bar'] = jnp.nan
+    errs.loc['Re', 'bar'] = jnp.nan
 
-    errs.loc['mux', 'centre'] = np.sqrt(np.nansum(
-        np.array((disk_e.mux**2, bulge_e.mux**2))
+    errs.loc['mux', 'centre'] = jnp.sqrt(jnp.nansum(
+        jnp.array((disk_e.mux**2, bulge_e.mux**2))
     ))
-    errs.loc['muy', 'centre'] = np.sqrt(np.nansum(
-        np.array((disk_e.muy**2, bulge_e.muy**2))
+    errs.loc['muy', 'centre'] = jnp.sqrt(jnp.nansum(
+        jnp.array((disk_e.muy**2, bulge_e.muy**2))
     ))
 
     for i in range(len(agg_res.spiral_arms)):
-        errs.loc['I.{}'.format(i), 'spiral'] = np.inf
-        errs.loc['falloff.{}'.format(i), 'spiral'] = np.inf
-        errs.loc['spread.{}'.format(i), 'spiral'] = np.inf
+        errs.loc['I.{}'.format(i), 'spiral'] = jnp.inf
+        errs.loc['falloff.{}'.format(i), 'spiral'] = jnp.inf
+        errs.loc['spread.{}'.format(i), 'spiral'] = jnp.inf
         errs.loc['A.{}'.format(i), 'spiral'] = 0.01
         errs.loc['phi.{}'.format(i), 'spiral'] = 1
-        errs.loc['t_min.{}'.format(i), 'spiral'] = np.deg2rad(0.5)
-        errs.loc['t_max.{}'.format(i), 'spiral'] = np.deg2rad(0.5)
+        errs.loc['t_min.{}'.format(i), 'spiral'] = jnp.deg2rad(0.5)
+        errs.loc['t_max.{}'.format(i), 'spiral'] = jnp.deg2rad(0.5)
     return df_to_dict(errs)
 
 
