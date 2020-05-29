@@ -22,7 +22,7 @@ from astropy.nddata.utils import Cutout2D
 from astropy import log
 import sep
 import montage_wrapper as montage
-import sdssCutoutGrab.sdss_psf as sdss_psf
+import .sdss_psf as sdss_psf
 
 
 LOCATION_QUERY_URL = 'http://skyserver.sdss.org/dr13/en/tools/search/x_results.aspx'
