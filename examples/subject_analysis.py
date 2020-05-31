@@ -270,20 +270,20 @@ def do_subject(subject_id):
     ###### Plotting ######
     plot_models(sanitized_models, data, dpi=80)
     os.makedirs('images/volunteer_models/png', exist_ok=True)
-    plt.savefig('images/volunteer_models/{}.pdf', bbox_inches='tight')
-    plt.savefig('images/volunteer_models/png/{}.png', bbox_inches='tight')
+    plt.savefig('images/volunteer_models/{}.pdf'.format(subject_id), bbox_inches='tight')
+    plt.savefig('images/volunteer_models/png/{}.png'.format(subject_id), bbox_inches='tight')
     plt.close()
 
     plot_aggregation_result(aggregation_result, data, figsize=(6, 6), dpi=80)
     os.makedirs('images/aggregate_models/png', exist_ok=True)
-    plt.savefig('images/aggregate_models/{}.pdf', bbox_inches='tight')
-    plt.savefig('images/aggregate_models/png/{}.png', bbox_inches='tight')
+    plt.savefig('images/aggregate_models/{}.pdf'.format(subject_id), bbox_inches='tight')
+    plt.savefig('images/aggregate_models/png/{}.png'.format(subject_id), bbox_inches='tight')
     plt.close()
 
     plot_tuning_result(data, aggregation_result, final_model, deparametrized_model, comps, o.psf, o.sigma)
     os.makedirs('images/tuning_result/png', exist_ok=True)
-    plt.savefig('images/tuning_result/{}.pdf', bbox_inches='tight')
-    plt.savefig('images/tuning_result/png/{}.png', bbox_inches='tight')
+    plt.savefig('images/tuning_result/{}.pdf'.format(subject_id), bbox_inches='tight')
+    plt.savefig('images/tuning_result/png/{}.png'.format(subject_id), bbox_inches='tight')
     plt.close()
 
     ###### Return complied value ######
@@ -306,7 +306,7 @@ def do_subject(subject_id):
         data=data,
         sigma_image=cutout_data['r']['sigma'].astype(np.float64),
         psf=cutout_data['r']['psf'].astype(np.float64),
-    ))
+    )
 
 
 def main(overwrite=False):

@@ -82,6 +82,9 @@ def cluster_geoms(geoms, eps, min_samples):
 
 
 def get_cluster_labels(geoms, eps, min_samples):
+    """Uses DBSCAN to cluster geometries based off of their Jaccard distance,
+    and returns the cluster labels
+    """
     filtered = geoms.dropna()
     if len(filtered) == 0:
         return pd.Series({i: np.nan for i in geoms.index})

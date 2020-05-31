@@ -28,6 +28,9 @@ BAR_LIMITS = np.array([
 SPIRAL_MERGING_DISTANCE = COMPONENT_CLUSTERING_PARAMS['spiral']['merging_distance']
 
 def circular_error(t, nsymm=1):
+    """Compute the error on an angle, with a provided number of degrees of
+    freedom
+    """
     assert(len(t) > 0)
     x = t * nsymm
     v = np.array((1/len(x) * np.sin(x).sum(), 1/len(x) * np.cos(x).sum()))
@@ -130,6 +133,10 @@ def aggregate_model_clusters_mean(component_clusters):
 def aggregate_geom_jaccard(geoms, x0=np.array((256, 256, 5, 0.7, 0)),
                            bounds=None,
                            constructor_func=ellipse_from_param_list):
+    """Given an iterable of shapely geoms, compute the shape (defined by the
+    `constructor` function) with the smallest sum of jaccard distances to geoms
+    in the iterable
+    """
     def __distance_func(p):
         p = np.array(p)
         assert len(p) == 5, 'Invalid number of parameters supplied'

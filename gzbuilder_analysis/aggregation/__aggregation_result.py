@@ -9,6 +9,18 @@ from .__aggregate import circular_error, aggregate_components
 
 
 class AggregationResult(object):
+    """Handy class which accepts a Series of Galaxy Builder parsed models, and
+    performs Aggregation of all components, including error calculation
+
+    Arguments:
+    models -- the models to aggregate
+    galaxy_data -- the numpy array of pixel values for the galaxy (used for
+                   scale normalization)
+
+    Keyword Arguments:
+    clustering_params -- The clustering parameters to use (see
+                         gzbuilder_analysis.config.COMPONENT_CLUSTERING_PARAMS)
+    """
     def __init__(self, models, galaxy_data,
                  clustering_params=COMPONENT_CLUSTERING_PARAMS):
         self.clusters = cluster_components(
