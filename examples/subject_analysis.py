@@ -97,21 +97,44 @@ def do_subject(subject_id):
 
     ###### Subject Preparation ######
     # get the galaxy position from its metadata
-    pos = metadata.loc[subject_id][['ra', 'dec', 'Petrosian radius (degrees)']].astype(float)
+    pos = metadata.loc[subject_id][
+        ['ra', 'dec', 'Petrosian radius (degrees)']
+    ].astype(float)
 
-    fitting_metadata = download_json(locations['difference'].loc[subject_id]).apply(np.array)
+    fitting_metadata = download_json(
+        locations['difference'].loc[subject_id]
+    ).apply(np.array)
     zoo_image = download_image(locations['image'].loc[subject_id])
 
     # create the stacked image from SDSS frames
-    cutout_data, frame_data = get_sdss_cutout(pos['ra'], pos['dec'], cutout_radius=pos['Petrosian radius (degrees)'], bands=bands, return_frame_data=True)
+    with tqdm.tqdm(desc='Downloading SDSS frames', leave=False) as bar:
+        cutout_data, frame_data = get_sdss_cutout(
+            pos['ra'],
+            pos['dec'],
+            cutout_radius=pos['Petrosian radius (degrees)'],
+            bands=bands,
+            return_frame_data=True
+        )
 
-    # due to complications during project design, we need to map from the uploaded image
-    # (created using montage, which has a smoothing effect), to the properly stacked image here
-    montage_cutout = get_montage_cutout(frame_data, pos['ra'], pos['dec'], pos['Petrosian radius (degrees)'])
+    # due to complications during project design, we need to map from the
+    # uploaded image (created using montage, which has a smoothing effect),
+    # to the properly stacked image here
+    with tqdm.tqdm(desc='Performing montage', leave=False) as bar:
+        montage_cutout = get_montage_cutout(
+            frame_data,
+            pos['ra'],
+            pos['dec'],
+            pos['Petrosian radius (degrees)']
+        )
     montage_wcs = montage_cutout.wcs
-    # some images show a weird rotation, we account for this by calculating the optimal residual between the montaged result
-    # and the image shown to volunteers
-    rotation_correction = get_rotation_correction(montage_cutout.data, fitting_metadata['imageData'], fitting_metadata['mask'].astype(bool))
+    # some images show a weird rotation, we account for this by calculating
+    # the optimal residual between the montaged result and the image shown
+    # to volunteers
+    rotation_correction = get_rotation_correction(
+        montage_cutout.data,
+        fitting_metadata['imageData'],
+        fitting_metadata['mask'].astype(bool)
+    )
 
     target_wcs = cutout_data[bands[0]]['wcs']
 
@@ -152,7 +175,10 @@ def do_subject(subject_id):
 
     ###### Clustering ######
     try:
-        aggregation_result = ag.AggregationResult(sanitized_models, cutout_data['r']['data'])
+        aggregation_result = ag.AggregationResult(
+            sanitized_models,
+            cutout_data['r']['data']
+        )
     except TypeError as e:
         print(e)
         print('No disk cluster for {}'.format(subject_id))
@@ -321,12 +347,12 @@ def main(overwrite=False):
             subject_id = q.get()
             if not overwrite and os.path.exists('results/{}.pickle.gz'.format(subject_id)):
                 sleep(0.1)
-                continue
-            try:
-                result = do_subject(subject_id)
-            except Exception as e:
-                log.warn((subject_id, e))
-                q.put(subject_id)
+            else:
+                try:
+                    result = do_subject(subject_id)
+                except Exception as e:
+                    log.warn((subject_id, e))
+                    q.put(subject_id)
             bar.update(1)
 
     # for subject_id in tqdm.tqdm(subjects.index, desc='iterating_over_subjects'):
