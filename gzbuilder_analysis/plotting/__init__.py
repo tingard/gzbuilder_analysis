@@ -167,12 +167,16 @@ def plot_tuning_result(data, aggregation_result, final_model, deparametrized_mod
     final_gal = np.ma.masked_array(psf_conv(sum(comps.values()), psf), data.mask)
     n_spirals = len(final_model.get('spiral', {})) // 6
     fit_spirals = get_spirals(final_model.to_dict(), n_spirals, final_model.disk.roll)
-    lm = _stretch([
-        min(np.nanmin(data), np.nanmin(final_gal)),
-        max(np.nanmax(data), np.nanmax(final_gal)),
-    ])
+
+    stretched_model = _stretch(final_gal)
+    stretched_data = _stretch(data)
+
+    lims = (
+        min(np.nanmin(stretched_data), np.nanmin(stretched_model)),
+        max(np.nanmax(stretched_data), np.nanmax(stretched_model)),
+    )
     d = (final_gal - data) / sigma_image
-    l2 = np.nanmax(np.abs(d))
+    diff_lims = np.nanmax(np.abs(d))
 
     fig, ax = plt.subplots(
         nrows=2, ncols=3,
@@ -181,14 +185,14 @@ def plot_tuning_result(data, aggregation_result, final_model, deparametrized_mod
     )
     plt.subplots_adjust(wspace=0, hspace=0.15)
     [
-        a.imshow(_stretch(data), vmin=lm[0], vmax=lm[1], **utils.imshow_kwargs)
+        a.imshow(stretched_data, vmin=lims[0], vmax=lims[1], **utils.imshow_kwargs)
         for a in (ax[0, 0], ax[1, 0], ax[1, 1])
     ]
     ax[0, 1].imshow(
-        _stretch(final_gal),
-        vmin=lm[0], vmax=lm[1], **utils.imshow_kwargs,
+        stretched_model,
+        vmin=lims[0], vmax=lims[1], **utils.imshow_kwargs,
     )
-    c = ax[0][2].imshow(d, vmin=-l2, vmax=l2, cmap='seismic', origin='lower')
+    c = ax[0][2].imshow(d, vmin=-diff_lims, vmax=diff_lims, cmap='seismic', origin='lower')
     cbar = plt.colorbar(c, ax=ax, shrink=0.475, anchor=(0, 1))
     cbar.ax.set_ylabel(r'Residual, units of $\sigma$')
 

@@ -3,6 +3,7 @@ import requests
 import json
 import re
 import tempfile
+import queue
 from time import sleep
 from copy import deepcopy
 from io import BytesIO
@@ -20,6 +21,7 @@ from astropy.coordinates import SkyCoord
 from astropy.nddata.utils import Cutout2D
 from astropy.io import fits
 from astropy.wcs import WCS
+from astropy import log
 from panoptes_client import Panoptes, Project
 
 from gzbuilder_analysis.data import get_sdss_cutout, download_json, download_image, \
@@ -312,15 +314,30 @@ def do_subject(subject_id):
 def main(overwrite=False):
     os.makedirs('aggregation_results', exist_ok=True)
     os.makedirs('results', exist_ok=True)
-    for subject_id in tqdm.tqdm(subjects.index, desc='iterating_over_subjects'):
-        if not overwrite and os.path.exists('results/{}.pickle.gz'.format(subject_id)):
-            sleep(0.1)
-            continue
-        result = do_subject(subject_id)
-        if result is not None:
-            agg_res = result.pop('aggregation_result', None)
-            pd.to_pickle(agg_res, 'aggregation_results/{}.pickle.gz'.format(subject_id))
-            pd.to_pickle(result, 'results/{}.pickle.gz'.format(subject_id))
+    q = queue.Queue()
+    [q.put(subject_id) for subject_id in subjects.index.values]
+    with tqdm.tqdm(desc='iterating_over_subjects') as bar:
+        while not q.empty():
+            subject_id = q.get()
+            if not overwrite and os.path.exists('results/{}.pickle.gz'.format(subject_id)):
+                sleep(0.1)
+                continue
+            try:
+                result = do_subject(subject_id)
+            except Exception as e:
+                log.warn((subject_id, e))
+                q.put(subject_id)
+            bar.update(1)
+
+    # for subject_id in tqdm.tqdm(subjects.index, desc='iterating_over_subjects'):
+    #     if not overwrite and os.path.exists('results/{}.pickle.gz'.format(subject_id)):
+    #         sleep(0.1)
+    #         continue
+    #     result = do_subject(subject_id)
+    #     if result is not None:
+    #         agg_res = result.pop('aggregation_result', None)
+    #         pd.to_pickle(agg_res, 'aggregation_results/{}.pickle.gz'.format(subject_id))
+    #         pd.to_pickle(result, 'results/{}.pickle.gz'.format(subject_id))
 
 
 if __name__ == '__main__':
