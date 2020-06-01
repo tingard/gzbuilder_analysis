@@ -44,7 +44,7 @@ def gen_utils(data):
     ))
 
 
-def plot_models(models, data, **kwargs):
+def plot_models(data, models, **kwargs):
     utils = gen_utils(data)
     geoms = pd.DataFrame(
         models.apply(get_geoms).values.tolist(),
@@ -94,7 +94,7 @@ def plot_models(models, data, **kwargs):
     return fig, ax
 
 
-def plot_aggregation_result(aggregation_result, data, **kwargs):
+def plot_aggregation_result(data, aggregation_result, **kwargs):
     utils = gen_utils(data)
     disk_crop = min(np.abs(utils.imshow_kwargs['extent']).min(), 1000)
     bulge_crop = bar_crop = min(np.abs(utils.imshow_kwargs['extent']).min(), 15)
