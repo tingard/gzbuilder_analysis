@@ -350,6 +350,9 @@ def main(overwrite=False):
             else:
                 try:
                     result = do_subject(subject_id)
+                    agg_res = result.pop('aggregation_result', None)
+                    pd.to_pickle(agg_res, 'aggregation_results/{}.pickle.gz'.format(subject_id))
+                    pd.to_pickle(result, 'results/{}.pickle.gz'.format(subject_id))
                 except Exception as e:
                     log.warn((subject_id, e))
                     q.put(subject_id)

@@ -49,7 +49,7 @@ def load_fit_results(path='output_files/tuning_results', ext='pkl.gz', include_b
     )
     if not include_bad:
         return fit_models.apply(
-            lambda m: m if m['res']['success'] else np.nan
+            lambda m: m if m['res']['success'] else None
         ).dropna().apply(pd.Series)
     return fit_models.apply(pd.Series)
 
