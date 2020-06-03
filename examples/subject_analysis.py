@@ -4,6 +4,8 @@ import json
 import re
 import tempfile
 import queue
+import warnings
+from datetime import datetime
 from time import sleep
 from copy import deepcopy
 from io import BytesIO
@@ -21,6 +23,7 @@ from astropy.coordinates import SkyCoord
 from astropy.nddata.utils import Cutout2D
 from astropy.io import fits
 from astropy.wcs import WCS
+from astropy import log
 from astropy import log
 from panoptes_client import Panoptes, Project
 
@@ -42,13 +45,6 @@ import jax.numpy as jnp
 from jax import ops
 from jax.config import config
 config.update("jax_enable_x64", True)
-
-# suppress warnings to keep our beautiful progress bar working
-import warnings
-from astropy import log
-warnings.simplefilter('ignore', UserWarning)
-log.setLevel('ERROR')
-np.seterr(divide='ignore', invalid='ignore')
 
 # We need a Zooniverse classification and subject export
 try:
@@ -100,11 +96,11 @@ def do_subject(subject_id):
     pos = metadata.loc[subject_id][
         ['ra', 'dec', 'Petrosian radius (degrees)']
     ].astype(float)
-
-    fitting_metadata = download_json(
-        locations['difference'].loc[subject_id]
-    ).apply(np.array)
-    zoo_image = download_image(locations['image'].loc[subject_id])
+    with tqdm.tqdm(desc='Downloading Zooniverse data', leave=False) as bar:
+        fitting_metadata = download_json(
+            locations['difference'].loc[subject_id]
+        ).apply(np.array)
+        zoo_image = download_image(locations['image'].loc[subject_id])
 
     # create the stacked image from SDSS frames
     with tqdm.tqdm(desc='Downloading SDSS frames', leave=False) as bar:
@@ -180,8 +176,7 @@ def do_subject(subject_id):
             cutout_data['r']['data']
         )
     except TypeError as e:
-        print(e)
-        print('No disk cluster for {}'.format(subject_id))
+        log.warn('No disk cluster for {}'.format(subject_id))
         raise(e)
 
     ###### Optimization ######
@@ -346,7 +341,7 @@ def main(overwrite=False):
         while not q.empty():
             subject_id = q.get()
             if not overwrite and os.path.exists('results/{}.pickle.gz'.format(subject_id)):
-                sleep(0.1)
+                sleep(0.025)
             else:
                 try:
                     result = do_subject(subject_id)
@@ -370,4 +365,11 @@ def main(overwrite=False):
 
 
 if __name__ == '__main__':
-    main()
+    # suppress warnings to keep our beautiful progress bar working
+    warnings.simplefilter('ignore', UserWarning)
+    log.setLevel('WARN')
+    np.seterr(divide='ignore', invalid='ignore')
+
+    os.makedirs('logs', exist_ok=True)
+    with log.log_to_file('logs/{}'.format(str(datetime.now()).replace(' ', '_'))):
+        main()
