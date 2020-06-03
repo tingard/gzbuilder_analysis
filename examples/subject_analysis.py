@@ -371,5 +371,5 @@ if __name__ == '__main__':
     np.seterr(divide='ignore', invalid='ignore')
 
     os.makedirs('logs', exist_ok=True)
-    with log.log_to_file('logs/{}'.format(str(datetime.now()).replace(' ', '_'))):
+    with log.log_to_file('logs/{}.log'.format(str(datetime.now()).replace(' ', '_'))):
         main()
