@@ -37,6 +37,8 @@ PSF_QUERY_URL = (
     'psField-{run:06d}-{camcol}-{field:04d}.fit'
 )
 
+__SKYSERVER_URL = 'http://skyserver.sdss.org/dr16/SkyServerWS/ImgCutout/getjpeg?TaskName=Skyserver.Chart.Navi&ra={}&dec={}&scale=0.396&width={}&height={}&opt='
+
 GAIN_TABLE = pd.DataFrame(
     [
         [1.62, 3.32, 4.71, 5.165, 4.745],
@@ -80,6 +82,16 @@ def __download_retry_wrapper(func, n_retries=RETRY_COUNT):
                 _err = err
         raise(_err)
     return wrapper_func
+
+
+@__download_retry_wrapper
+def download_sdss_rgb_cutout(ra, dec, shape):
+    return Image.open(
+        requests.get(
+            __SKYSERVER_URL.format(ra, dec, *shape),
+            stream=True
+        ).raw
+    )
 
 
 @__download_retry_wrapper
